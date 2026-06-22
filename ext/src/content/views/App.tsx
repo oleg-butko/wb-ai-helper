@@ -9,6 +9,7 @@ type ParsedInfo = {
 	name: string
 	product_details: string[]
 	feedback_reasons: string[]
+	rating: number
 }
 
 const buttonsRootSelector =
@@ -51,6 +52,42 @@ function findFeedbackInfoRoot(root: ParentNode) {
 	)
 }
 
+function findElementByClassPrefix(root: ParentNode, prefix: string) {
+	return Array.from(root.querySelectorAll('div')).find((element) =>
+		Array.from(element.classList).some((className) =>
+			className.startsWith(prefix)
+		)
+	)
+}
+
+function parseRating(root: ParentNode) {
+	const ratingRoot = findElementByClassPrefix(root, 'Rating__')
+
+	if (!ratingRoot) {
+		return 0
+	}
+
+	return Array.from(ratingRoot.children)
+		.slice(0, 5)
+		.reduce((rating, star) => {
+			const classes = Array.from(star.classList)
+
+			if (classes.some((className) => className.startsWith('Rating--active__'))) {
+				return rating + 1
+			}
+
+			if (
+				classes.some((className) =>
+					className.startsWith('Rating--not-active__')
+				)
+			) {
+				return rating
+			}
+
+			return rating
+		}, 0)
+}
+
 function parseFeedbackInfo(root: ParentNode): ParsedInfo {
 	const infoRoot = findFeedbackInfoRoot(root)
 	const firstText = infoRoot.querySelector(textSelector)
@@ -74,7 +111,8 @@ function parseFeedbackInfo(root: ParentNode): ParsedInfo {
 		product_details: productDetailsRoot
 			? getTextValues(productDetailsRoot)
 			: [],
-		feedback_reasons: feedbackReasons
+		feedback_reasons: feedbackReasons,
+		rating: parseRating(infoRoot)
 	}
 }
 
@@ -249,6 +287,10 @@ function App() {
 							<div>
 								<dt>feedback_reasons:</dt>
 								<dd>{parsedInfo.feedback_reasons.join(', ')}</dd>
+							</div>
+							<div>
+								<dt>rating:</dt>
+								<dd>{parsedInfo.rating}</dd>
 							</div>
 						</dl>
 					</div>
