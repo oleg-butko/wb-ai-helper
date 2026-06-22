@@ -1,0 +1,133 @@
+.popup-container {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  margin: 1.25rem;
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  user-select: none;
+  line-height: 1em;
+}
+
+.popup-content {
+  background-color: white;
+  color: #1f2937;
+  border-radius: 0.5rem;
+  box-shadow:
+    0 4px 6px -1px rgb(0 0 0 / 0.1),
+    0 2px 4px -2px rgb(0 0 0 / 0.1);
+  width: max-content;
+  height: min-content;
+  padding: 0.5rem 1rem;
+  margin: auto 0.5rem 0 0;
+  transition: opacity 300ms;
+}
+
+.toggle-button {
+  display: flex;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 9999px;
+  box-shadow:
+    0 1px 3px 0 rgb(0 0 0 / 0.1),
+    0 1px 2px -1px rgb(0 0 0 / 0.1);
+  cursor: pointer;
+  border: none;
+  background-color: #288cd7;
+}
+
+.toggle-button:hover {
+  background-color: #1e6aa3;
+}
+
+.button-icon {
+  padding: 4px;
+}
+
+.opacity-100 {
+  opacity: 1;
+}
+
+.opacity-0 {
+  opacity: 0;
+}
+
+.helper-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgb(15 23 42 / 0.35);
+  line-height: 1.4;
+  user-select: text;
+}
+
+.helper-modal {
+  width: min(42rem, 100%);
+  max-height: min(36rem, calc(100vh - 2rem));
+  overflow: auto;
+  border-radius: 0.5rem;
+  background: #ffffff;
+  color: #172033;
+  box-shadow:
+    0 20px 25px -5px rgb(0 0 0 / 0.1),
+    0 8px 10px -6px rgb(0 0 0 / 0.1);
+}
+
+.helper-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.helper-modal-header h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.helper-modal-close {
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  padding: 0.375rem 0.625rem;
+  background: #ffffff;
+  color: #172033;
+  cursor: pointer;
+  font: inherit;
+}
+
+.helper-modal-close:hover {
+  background: #f3f4f6;
+}
+
+.helper-modal-data {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 1rem;
+}
+
+.helper-modal-data div {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.25rem;
+}
+
+.helper-modal-data dt {
+  font-weight: 700;
+}
+
+.helper-modal-data dd {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
