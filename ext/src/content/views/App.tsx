@@ -192,7 +192,7 @@ function parseFeedbackInfo(root: ParentNode): ParsedInfo {
 	const parsedInfo: ParsedInfo = {
 		name: firstText ? getText(firstText) : '',
 		product_details: productDetailsRoot
-			? getTextValues(productDetailsRoot)
+			? getTextValues(productDetailsRoot).filter((value) => value !== 'Ещё')
 			: [],
 		feedback_reasons: feedbackReasons,
 		rating: parseRating(infoRoot),

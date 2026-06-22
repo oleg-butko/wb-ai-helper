@@ -17,3 +17,9 @@ Solution: Locate the article-info and vendor-code elements by stable class prefi
 Problem: The product parser searched only the feedback-info sub-block, but the article-info card is its sibling under the drawer portal, so every product field was empty.
 
 Solution: Keep feedback and rating parsing scoped to the feedback-info block, but pass the complete drawer portal to the product parser so it can find the sibling article-info card.
+
+## Exclude drawer control text from product details
+
+Problem: The drawer's `Ещё` control text was collected as a product detail even though it is interface noise rather than feedback data.
+
+Solution: Remove the exact trimmed `Ещё` value from `product_details` after text extraction without changing parsing for other fields.
