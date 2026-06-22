@@ -252,9 +252,9 @@ function createHelperButton(
 	}
 
 	if (label) {
-		label.textContent = 'Helper'
+		label.textContent = 'AI ответ'
 	} else if (button) {
-		button.textContent = 'Helper'
+		button.textContent = 'AI ответ'
 	}
 
 	return wrapper
