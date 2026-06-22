@@ -10,6 +10,12 @@ type ParsedInfo = {
 	product_details: string[]
 	feedback_reasons: string[]
 	rating: number
+	product_name: string
+	product_url: string
+	vendor_code_1: string
+	vendor_code_2: string
+	colors: string
+	size: string
 }
 
 const buttonsRootSelector =
@@ -53,11 +59,88 @@ function findFeedbackInfoRoot(root: ParentNode) {
 }
 
 function findElementByClassPrefix(root: ParentNode, prefix: string) {
+	if (root instanceof Element && hasClassPrefix(root, prefix)) {
+		return root
+	}
+
 	return Array.from(root.querySelectorAll('div')).find((element) =>
-		Array.from(element.classList).some((className) =>
-			className.startsWith(prefix)
-		)
+		hasClassPrefix(element, prefix)
 	)
+}
+
+function hasClassPrefix(element: Element, prefix: string) {
+	return Array.from(element.classList).some((className) =>
+		className.startsWith(prefix)
+	)
+}
+
+function hasAncestorWithClassPrefix(element: Element, prefix: string) {
+	let ancestor = element.parentElement
+
+	while (ancestor) {
+		if (hasClassPrefix(ancestor, prefix)) {
+			return true
+		}
+
+		ancestor = ancestor.parentElement
+	}
+
+	return false
+}
+
+function parseProductInfo(root: ParentNode) {
+	const productRoot = findElementByClassPrefix(
+		root,
+		'Extended-article-info-card__info__'
+	)
+
+	if (!productRoot) {
+		return {
+			product_name: '',
+			product_url: '',
+			vendor_code_1: '',
+			vendor_code_2: '',
+			colors: '',
+			size: ''
+		}
+	}
+
+	const productLink = productRoot.querySelector<HTMLAnchorElement>('a[href]')
+	const vendorCodes = Array.from(productRoot.querySelectorAll('div'))
+		.filter((element) =>
+			hasClassPrefix(
+				element,
+				'Extended-article-info-card__vendor-code-container-item__'
+			)
+		)
+		.map(getText)
+
+	const dividerValues = Array.from(productRoot.querySelectorAll('div'))
+		.filter(
+			(element) =>
+				hasClassPrefix(
+					element,
+					'Extended-article-info-card__divider__'
+				) &&
+				!hasAncestorWithClassPrefix(
+					element,
+					'Extended-article-info-card__vendor-code-container-item__'
+				)
+		)
+		.map((divider) =>
+			divider.nextElementSibling
+				? getText(divider.nextElementSibling)
+				: ''
+		)
+
+	return {
+		product_name: productLink ? getText(productLink) : '',
+		product_url: productLink?.getAttribute('href')?.trim() ?? '',
+		vendor_code_1: vendorCodes[0] ?? '',
+		vendor_code_2: vendorCodes[1] ?? '',
+		colors: dividerValues[0] ?? '',
+		size: dividerValues[1] ?? ''
+	}
 }
 
 function parseRating(root: ParentNode) {
@@ -112,7 +195,8 @@ function parseFeedbackInfo(root: ParentNode): ParsedInfo {
 			? getTextValues(productDetailsRoot)
 			: [],
 		feedback_reasons: feedbackReasons,
-		rating: parseRating(infoRoot)
+		rating: parseRating(infoRoot),
+		...parseProductInfo(infoRoot)
 	}
 }
 
@@ -291,6 +375,30 @@ function App() {
 							<div>
 								<dt>rating:</dt>
 								<dd>{parsedInfo.rating}</dd>
+							</div>
+							<div>
+								<dt>product_name:</dt>
+								<dd>{parsedInfo.product_name}</dd>
+							</div>
+							<div>
+								<dt>product_url:</dt>
+								<dd>{parsedInfo.product_url}</dd>
+							</div>
+							<div>
+								<dt>vendor_code_1:</dt>
+								<dd>{parsedInfo.vendor_code_1}</dd>
+							</div>
+							<div>
+								<dt>vendor_code_2:</dt>
+								<dd>{parsedInfo.vendor_code_2}</dd>
+							</div>
+							<div>
+								<dt>colors:</dt>
+								<dd>{parsedInfo.colors}</dd>
+							</div>
+							<div>
+								<dt>size:</dt>
+								<dd>{parsedInfo.size}</dd>
 							</div>
 						</dl>
 					</div>
