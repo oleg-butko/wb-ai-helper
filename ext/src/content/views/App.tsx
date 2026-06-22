@@ -1,4 +1,3 @@
-import Logo from '@/assets/crx.svg'
 import { useEffect, useState } from 'react'
 import { waitForElement } from '../utils/waitForElement'
 import './App.css'
@@ -285,11 +284,7 @@ function syncHelperButton(portal: HTMLElement, onHelperClick: () => void) {
 }
 
 function App() {
-	const [show, setShow] = useState(false)
-	const [portalFound, setPortalFound] = useState(false)
 	const [parsedInfo, setParsedInfo] = useState<ParsedInfo | null>(null)
-
-	const toggle = () => setShow((prev) => !prev)
 
 	useEffect(() => {
 		const abortController = new AbortController()
@@ -308,8 +303,6 @@ function App() {
 				)
 
 				console.log('[CRXJS] Portal found') // portal
-
-				setPortalFound(true)
 
 				const handleHelperClick = () => {
 					setParsedInfo(parseFeedbackInfo(portal))
@@ -351,20 +344,7 @@ function App() {
 	}, [])
 
 	return (
-		<div className='popup-container'>
-			{show && (
-				<div
-					className={`popup-content ${show ? 'opacity-100' : 'opacity-0'}`}>
-					<h1>HELLO CRXJS</h1>
-
-					<p>Portal status: {portalFound ? 'found' : 'waiting...'}</p>
-				</div>
-			)}
-
-			<button className='toggle-button' onClick={toggle}>
-				<img src={Logo} alt='CRXJS logo' className='button-icon' />
-			</button>
-
+		<>
 			{parsedInfo && (
 				<div className='helper-modal-backdrop'>
 					<div className='helper-modal' role='dialog' aria-modal='true'>
@@ -423,7 +403,7 @@ function App() {
 					</div>
 				</div>
 			)}
-		</div>
+		</>
 	)
 }
 
