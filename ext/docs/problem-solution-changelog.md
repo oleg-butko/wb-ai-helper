@@ -11,3 +11,9 @@ Solution: Find the rating root and star states by their stable class prefixes. C
 Problem: Product metadata uses generated class suffixes, and one divider belongs to the vendor-code layout rather than to the color and size values.
 
 Solution: Locate the article-info and vendor-code elements by stable class prefixes. Exclude dividers nested under vendor-code items, then map the remaining divider siblings to colors and size in document order.
+
+## Search the complete drawer for article metadata
+
+Problem: The product parser searched only the feedback-info sub-block, but the article-info card is its sibling under the drawer portal, so every product field was empty.
+
+Solution: Keep feedback and rating parsing scoped to the feedback-info block, but pass the complete drawer portal to the product parser so it can find the sibling article-info card.

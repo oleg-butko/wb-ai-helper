@@ -263,7 +263,7 @@ function parseFeedbackInfo(root: ParentNode): ParsedInfo {
 			: [],
 		feedback_reasons: feedbackReasons,
 		rating: parseRating(infoRoot),
-		...parseProductInfo(infoRoot)
+		...parseProductInfo(root)
 	}
 }
 
