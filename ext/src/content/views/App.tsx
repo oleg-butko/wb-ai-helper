@@ -88,52 +88,13 @@ function hasAncestorWithClassPrefix(element: Element, prefix: string) {
 	return false
 }
 
-function describeElement(element: Element | null) {
-	if (!element) {
-		return null
-	}
-
-	return {
-		tag: element.tagName.toLowerCase(),
-		id: element.id,
-		className: element.getAttribute('class') ?? '',
-		text: getText(element).slice(0, 200)
-	}
-}
-
 function parseProductInfo(root: ParentNode) {
-	const articleInfoCandidates = Array.from(
-		root.querySelectorAll('[class]')
-	).filter((element) =>
-		Array.from(element.classList).some((className) =>
-			className.startsWith('Extended-article-info-card__')
-		)
-	)
-
-	console.log('[CRXJS][product-parser] parse scope', {
-		root:
-			root instanceof Element
-				? describeElement(root)
-				: { nodeName: root.nodeName },
-		articleInfoCandidateCount: articleInfoCandidates.length,
-		articleInfoCandidates: articleInfoCandidates.map(describeElement)
-	})
-
 	const productRoot = findElementByClassPrefix(
 		root,
 		'Extended-article-info-card__info__'
 	)
 
-	console.log(
-		'[CRXJS][product-parser] selected product root',
-		describeElement(productRoot ?? null)
-	)
-
 	if (!productRoot) {
-		console.warn(
-			'[CRXJS][product-parser] product root was not found in parse scope'
-		)
-
 		return {
 			product_name: '',
 			product_url: '',
@@ -172,7 +133,7 @@ function parseProductInfo(root: ParentNode) {
 				: ''
 		)
 
-	const result = {
+	return {
 		product_name: productLink ? getText(productLink) : '',
 		product_url: productLink?.getAttribute('href')?.trim() ?? '',
 		vendor_code_1: vendorCodes[0] ?? '',
@@ -180,23 +141,6 @@ function parseProductInfo(root: ParentNode) {
 		colors: dividerValues[0] ?? '',
 		size: dividerValues[1] ?? ''
 	}
-
-	console.log('[CRXJS][product-parser] discovered elements', {
-		productLink: describeElement(productLink),
-		productHref: productLink?.getAttribute('href') ?? null,
-		vendorCodeElements: vendorCodeElements.map(describeElement),
-		dividers: dividerElements.map((divider) => ({
-			element: describeElement(divider),
-			insideVendorCode: hasAncestorWithClassPrefix(
-				divider,
-				'Extended-article-info-card__vendor-code-container-item__'
-			),
-			nextElementSibling: describeElement(divider.nextElementSibling)
-		}))
-	})
-	console.log('[CRXJS][product-parser] parsed result', result)
-
-	return result
 }
 
 function parseRating(root: ParentNode) {
@@ -229,17 +173,6 @@ function parseRating(root: ParentNode) {
 
 function parseFeedbackInfo(root: ParentNode): ParsedInfo {
 	const infoRoot = findFeedbackInfoRoot(root)
-
-	console.log('[CRXJS][feedback-parser] selected roots', {
-		inputRoot:
-			root instanceof Element
-				? describeElement(root)
-				: { nodeName: root.nodeName },
-		feedbackInfoRoot:
-			infoRoot instanceof Element ? describeElement(infoRoot) : null,
-		sameRoot: infoRoot === root
-	})
-
 	const firstText = infoRoot.querySelector(textSelector)
 	const productDetailsRoot = infoRoot.querySelector(
 		'div[data-testid="Product-item-details"]'
@@ -256,7 +189,7 @@ function parseFeedbackInfo(root: ParentNode): ParsedInfo {
 			})
 	}
 
-	return {
+	const parsedInfo: ParsedInfo = {
 		name: firstText ? getText(firstText) : '',
 		product_details: productDetailsRoot
 			? getTextValues(productDetailsRoot)
@@ -265,6 +198,25 @@ function parseFeedbackInfo(root: ParentNode): ParsedInfo {
 		rating: parseRating(infoRoot),
 		...parseProductInfo(root)
 	}
+	const missingFields = Object.entries(parsedInfo).flatMap(([field, value]) => {
+		if (typeof value === 'string' && value.trim() === '') {
+			return [field]
+		}
+
+		if (Array.isArray(value) && value.length === 0) {
+			return [field]
+		}
+
+		return []
+	})
+
+	if (missingFields.length > 0) {
+		console.warn('[CRXJS][feedback-parser] Parsed fields not found', {
+			fields: missingFields
+		})
+	}
+
+	return parsedInfo
 }
 
 function removeHelperButton() {
