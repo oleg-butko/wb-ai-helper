@@ -50,6 +50,7 @@
 - Added source-level guard coverage that the admin API-key page requires database-backed admin access.
 - Added direct package scripts for the new extension/admin API-key test suites.
 - Hardened the minimal admin page by showing extension users and generation requests for the selected key, and by requiring API-key id confirmation before invalidation.
+- Added an admin-only app navigation item for `/[locale]/admin/api-keys`, guarded by the Supabase `admins` table check.
 
 ## Verified
 
@@ -100,7 +101,6 @@ No required test tasks remain for the current slice.
 
 The first admin page is intentionally minimal. Follow-up UI improvements:
 
-- add route to main app navigation only for admins;
 - add pagination/filtering;
 - improve Russian/English dictionaries instead of hardcoded admin labels.
 

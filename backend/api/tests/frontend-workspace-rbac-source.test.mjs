@@ -21,3 +21,19 @@ await runCase("admin API key page requires database-backed admin access", async 
   assert.match(source, /notFound\(\)/);
   assert.doesNotMatch(source, /APP_ADMIN_EMAILS/);
 });
+
+await runCase("app navigation includes API-key admin link only after admin check", async () => {
+  const shellSource = await readFile(
+    new URL("../../src/components/app/app-page-shell.tsx", import.meta.url),
+    "utf8",
+  );
+  const navigationSource = await readFile(
+    new URL("../../src/core/navigation/app-navigation.ts", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(shellSource, /isAdminEmail\(user\.email\)/);
+  assert.match(shellSource, /getAppNavigation\(locale, dictionary, \{ isAdmin \}\)/);
+  assert.match(navigationSource, /isAdmin/);
+  assert.match(navigationSource, /\/admin\/api-keys/);
+});

@@ -8,6 +8,7 @@ import {
 } from "@/core/workspaces/workspace-shell-context";
 import { AppSectionNav } from "@/components/app/app-section-nav";
 import { WorkspaceAwareSiteHeader } from "@/components/app/workspace-aware-site-header";
+import { isAdminEmail } from "@/lib/admin";
 import type { Locale } from "@/lib/i18n/config";
 import type { SiteDictionary } from "@/lib/i18n/dictionaries";
 import { getModuleNavItems } from "@/modules/navigation";
@@ -24,7 +25,7 @@ type AppPageShellProps = {
   children?: ReactNode;
 };
 
-export function AppPageShell({
+export async function AppPageShell({
   locale,
   dictionary,
   eyebrow,
@@ -34,7 +35,8 @@ export function AppPageShell({
   user,
   children,
 }: AppPageShellProps) {
-  const appNavigation = getAppNavigation(locale, dictionary);
+  const isAdmin = await isAdminEmail(user.email);
+  const appNavigation = getAppNavigation(locale, dictionary, { isAdmin });
   const marketingModuleLinks = getModuleNavItems("marketing", locale);
   const appModuleLinks = getModuleNavItems("app", locale);
 

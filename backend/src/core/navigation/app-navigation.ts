@@ -11,6 +11,7 @@ export type AppNavigationItem = {
 export function getAppNavigation(
   locale: Locale,
   dictionary: SiteDictionary,
+  { isAdmin = false }: { isAdmin?: boolean } = {},
 ): AppNavigationItem[] {
   const coreItems: AppNavigationItem[] = [
     {
@@ -24,6 +25,14 @@ export function getAppNavigation(
       href: `/${locale}/settings`,
     },
   ];
+
+  if (isAdmin) {
+    coreItems.push({
+      id: "admin-api-keys",
+      label: "API keys",
+      href: `/${locale}/admin/api-keys`,
+    });
+  }
 
   const moduleItems = getModuleNavItems("app", locale).map(({ id, label, href }) => ({
     id,
