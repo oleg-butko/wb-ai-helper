@@ -45,6 +45,7 @@
     "test:api:sql-user-module-roles-retirement": "node scripts/run-test-suite.mjs api:sql-user-module-roles-retirement",
     "test:api:storage": "node scripts/run-test-suite.mjs api:storage",
     "test:api:env:dev": "node scripts/run-test-suite.mjs api:env:dev",
+    "test:api:env:e2e": "node scripts/run-test-suite.mjs api:env:e2e",
     "test:api:integration:all": "node scripts/run-test-suite.mjs api:integration:all",
     "test:api:integration:account": "node scripts/run-test-suite.mjs api:integration:account",
     "test:api:integration:workspace": "node scripts/run-test-suite.mjs api:integration:workspace",

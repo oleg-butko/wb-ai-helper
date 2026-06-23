@@ -12,9 +12,7 @@ function getPortFromSiteUrl(siteUrl) {
 }
 
 export function createE2EWebEnv(baseEnv) {
-  const webEnv = Object.fromEntries(
-    Object.entries(baseEnv).filter(([key]) => key !== "SUPABASE_SERVICE_ROLE_KEY"),
-  );
+  const webEnv = { ...baseEnv };
 
   const resolvedPort =
     webEnv.PORT ??

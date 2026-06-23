@@ -49,6 +49,7 @@ export const testSuites = {
       "api:sql-user-module-roles-retirement",
       "api:storage",
       "api:env:dev",
+      "api:env:e2e",
     ],
   },
   "api:integration:all": {
@@ -182,6 +183,10 @@ export const testSuites = {
   "api:env:dev": {
     label: "test:api:env:dev",
     ...nodeScript("scripts/run-node-with-warning-filter.mjs", "api/tests/dev-env-loading.test.mjs"),
+  },
+  "api:env:e2e": {
+    label: "test:api:env:e2e",
+    ...nodeScript("scripts/run-node-with-warning-filter.mjs", "api/tests/e2e-runtime-env.test.mjs"),
   },
   "api:integration:account": {
     label: "test:api:integration:account",

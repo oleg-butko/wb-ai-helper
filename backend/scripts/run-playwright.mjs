@@ -69,7 +69,7 @@ const child = spawn(command.file, command.args, {
     ...childEnv,
     PLAYWRIGHT_OUTPUT_DIR: outputDir,
     PLAYWRIGHT_REUSE_SERVER:
-      process.env.PLAYWRIGHT_REUSE_SERVER ?? (useProductionServer ? "false" : "true"),
+      process.env.PLAYWRIGHT_REUSE_SERVER ?? "false",
     ...(useProductionServer
       ? {
           PLAYWRIGHT_SERVER_COMMAND: "node scripts/start-e2e.mjs",

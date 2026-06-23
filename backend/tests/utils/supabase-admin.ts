@@ -319,6 +319,34 @@ function getAppAdminFixtureEmail() {
   return process.env.APP_ADMIN_EMAILS?.split(",")[0]?.trim().toLowerCase() || "e2e-app-admin@example.com";
 }
 
+async function upsertAdminEmail(email: string) {
+  const supabase = getSupabaseAdminClient();
+  const { error } = await withRetry(async () =>
+    await supabase.from("admins").upsert(
+      {
+        email: email.trim().toLowerCase(),
+        disabled_at: null,
+      },
+      { onConflict: "email" },
+    ),
+  );
+
+  if (error) {
+    throw error;
+  }
+}
+
+async function deleteAdminEmail(email: string) {
+  const supabase = getSupabaseAdminClient();
+  const { error } = await withRetry(async () =>
+    await supabase.from("admins").delete().eq("email", email.trim().toLowerCase()),
+  );
+
+  if (error) {
+    throw error;
+  }
+}
+
 async function createPersonalWorkspaceForUser(userId: string, email: string) {
   const supabase = getSupabaseAdminClient();
   const existingWorkspaceResponse = await withRetry(async () =>
@@ -629,6 +657,7 @@ export async function seedAuthFixtureUsers() {
     state.appAdminUser.password,
     true,
   );
+  await upsertAdminEmail(state.appAdminUser.email);
   await createPersonalWorkspaceForUser(state.appAdminUser.id, state.appAdminUser.email);
   state.moduleLabOperatorUser.id = await createUser(
     state.moduleLabOperatorUser.email,
@@ -721,6 +750,7 @@ export async function cleanupAuthFixtureUsers() {
     if (state.moduleLabPublicWorkspace.id) {
       await deleteWorkspaceById(state.moduleLabPublicWorkspace.id);
     }
+    await deleteAdminEmail(state.appAdminUser.email);
     await deleteUserById(state.confirmedUser.id);
     await deleteUserById(state.resetUser.id);
     await deleteUserById(state.settingsUser.id);

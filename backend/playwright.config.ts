@@ -41,7 +41,7 @@ export default defineConfig({
       PORT: sharedServerEnv.PORT ?? basePort,
     },
     url: baseURL,
-    reuseExistingServer: true, // process.env.PLAYWRIGHT_REUSE_SERVER !== "false",
+    reuseExistingServer: process.env.PLAYWRIGHT_REUSE_SERVER === "true",
     timeout: 31000
   },
   projects: [

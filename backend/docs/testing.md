@@ -43,6 +43,7 @@ Use the explicit `:smoke`, `:all`, and `:focus` commands where possible. The sho
   - `npm run test:api:workspace-compat`
   - `npm run test:api:storage`
   - `npm run test:api:env:dev`
+  - `npm run test:api:env:e2e`
   - `npm run test:api:integration:all`
   - `npm run test:api:integration:account`
   - `npm run test:api:integration:workspace`
