@@ -19,10 +19,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return generateAuthenticatedAppPageMetadata({
     params,
     canonicalPath: (locale) => `/${locale}/admin/api-keys`,
-    resolveMetadata() {
+    resolveMetadata(dictionary) {
       return {
-        title: "Extension API keys",
-        description: "Manage extension API keys and quota.",
+        title: dictionary.app.adminApiKeys.title,
+        description: dictionary.app.adminApiKeys.description,
       };
     },
   });
@@ -43,13 +43,13 @@ export default async function AdminApiKeysPage({ params }: PageProps) {
           dictionary={dictionary}
           user={user}
           surface={{
-            eyebrow: "Admin",
-            title: "Extension API keys",
-            description: "Create API keys, adjust quota, invalidate keys, and inspect generation history.",
-            highlights: ["API key lookup", "Quota audit trail", "Error reporting"],
+            eyebrow: dictionary.app.adminApiKeys.eyebrow,
+            title: dictionary.app.adminApiKeys.title,
+            description: dictionary.app.adminApiKeys.description,
+            highlights: dictionary.app.adminApiKeys.highlights,
           }}
         >
-          <AdminExtensionApiKeysCard />
+          <AdminExtensionApiKeysCard dictionary={dictionary.app.adminApiKeys} />
         </CoreAppPageShell>
       );
     },

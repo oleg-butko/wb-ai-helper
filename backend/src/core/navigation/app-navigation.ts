@@ -29,7 +29,7 @@ export function getAppNavigation(
   if (isAdmin) {
     coreItems.push({
       id: "admin-api-keys",
-      label: "API keys",
+      label: dictionary.app.adminApiKeys.navLabel,
       href: `/${locale}/admin/api-keys`,
     });
   }

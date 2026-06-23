@@ -190,6 +190,78 @@ export type SiteDictionary = {
       filesThumbnailFailed: string;
       filesChecklist: string[];
     };
+    adminApiKeys: {
+      navLabel: string;
+      eyebrow: string;
+      title: string;
+      description: string;
+      highlights: string[];
+      createTitle: string;
+      labelLabel: string;
+      initialQuotaLabel: string;
+      createSubmit: string;
+      initialQuotaReason: string;
+      createdCopyNotice: string;
+      rawApiKeyLabel: string;
+      copy: string;
+      copied: string;
+      findTitle: string;
+      rawApiKeyInputLabel: string;
+      findSubmit: string;
+      found: string;
+      notFound: string;
+      recentTitle: string;
+      refresh: string;
+      filterLabel: string;
+      statusLabel: string;
+      statusAll: string;
+      statusActive: string;
+      statusInvalidated: string;
+      columnLabel: string;
+      columnStatus: string;
+      columnQuota: string;
+      columnCreated: string;
+      open: string;
+      noMatches: string;
+      showingSummary: string;
+      previous: string;
+      next: string;
+      pageSummary: string;
+      selectedTitle: string;
+      idLabel: string;
+      quotaSummary: string;
+      invalidatedAt: string;
+      quotaAmountLabel: string;
+      reasonLabel: string;
+      addQuota: string;
+      removeQuota: string;
+      invalidationReasonLabel: string;
+      invalidationConfirmLabel: string;
+      invalidationConfirmError: string;
+      invalidate: string;
+      quotaEventsTitle: string;
+      noQuotaEvents: string;
+      extensionUsersTitle: string;
+      noExtensionUsers: string;
+      userIdColumn: string;
+      firstSeenColumn: string;
+      lastSeenColumn: string;
+      generationRequestsTitle: string;
+      noGenerationRequests: string;
+      statusColumn: string;
+      quotaConsumed: string;
+      quotaNotConsumed: string;
+      recentErrorsTitle: string;
+      noErrors: string;
+      loadKeysFailed: string;
+      createFailed: string;
+      detailFailed: string;
+      findFailed: string;
+      quotaUpdateFailed: string;
+      invalidateFailed: string;
+      quotaUpdated: string;
+      invalidated: string;
+    };
       moduleLab: {
         eyebrow: string;
         title: string;
@@ -527,6 +599,78 @@ const en: SiteDictionary = {
         "Fastify-side file validation with magic bytes",
         "Reusable metadata contracts for future workspace files",
       ],
+    },
+    adminApiKeys: {
+      navLabel: "API keys",
+      eyebrow: "Admin",
+      title: "Extension API keys",
+      description: "Create API keys, adjust quota, invalidate keys, and inspect generation history.",
+      highlights: ["API key lookup", "Quota audit trail", "Error reporting"],
+      createTitle: "Create API key",
+      labelLabel: "Label",
+      initialQuotaLabel: "Initial quota",
+      createSubmit: "Create key",
+      initialQuotaReason: "initial quota",
+      createdCopyNotice: "API key created. Copy it now; it will not be shown again.",
+      rawApiKeyLabel: "Raw API key",
+      copy: "Copy",
+      copied: "Copied",
+      findTitle: "Find by API key value",
+      rawApiKeyInputLabel: "Raw API key",
+      findSubmit: "Find key",
+      found: "API key found.",
+      notFound: "No API key matched that value.",
+      recentTitle: "Recent API keys",
+      refresh: "Refresh",
+      filterLabel: "Filter by label or id",
+      statusLabel: "Status",
+      statusAll: "All",
+      statusActive: "Active",
+      statusInvalidated: "Invalidated",
+      columnLabel: "Label",
+      columnStatus: "Status",
+      columnQuota: "Quota",
+      columnCreated: "Created",
+      open: "Open",
+      noMatches: "No API keys match the current filters.",
+      showingSummary: "Showing {shown} of {filtered} filtered keys ({loaded} loaded)",
+      previous: "Previous",
+      next: "Next",
+      pageSummary: "Page {page} / {pageCount}",
+      selectedTitle: "Selected key",
+      idLabel: "ID",
+      quotaSummary: "Quota: {used} used / {total} total / {remaining} remaining",
+      invalidatedAt: "Invalidated at {date}",
+      quotaAmountLabel: "Quota amount",
+      reasonLabel: "Reason",
+      addQuota: "Add quota",
+      removeQuota: "Remove quota",
+      invalidationReasonLabel: "Invalidation reason",
+      invalidationConfirmLabel: "Paste API key id to confirm invalidation",
+      invalidationConfirmError: "Paste the selected API key id into the confirmation field before invalidating.",
+      invalidate: "Invalidate",
+      quotaEventsTitle: "Quota events",
+      noQuotaEvents: "No quota events.",
+      extensionUsersTitle: "Extension users",
+      noExtensionUsers: "No extension users have used this key.",
+      userIdColumn: "User ID",
+      firstSeenColumn: "First seen",
+      lastSeenColumn: "Last seen",
+      generationRequestsTitle: "Generation requests",
+      noGenerationRequests: "No generation requests.",
+      statusColumn: "Status",
+      quotaConsumed: "consumed",
+      quotaNotConsumed: "not consumed",
+      recentErrorsTitle: "Recent errors",
+      noErrors: "No errors.",
+      loadKeysFailed: "Could not load API keys.",
+      createFailed: "Could not create API key.",
+      detailFailed: "Could not load API key details.",
+      findFailed: "Could not find API key.",
+      quotaUpdateFailed: "Could not update quota.",
+      invalidateFailed: "Could not invalidate API key.",
+      quotaUpdated: "Quota updated.",
+      invalidated: "API key invalidated.",
     },
       moduleLab: {
         eyebrow: "Module diagnostics",
@@ -921,6 +1065,78 @@ const ru: SiteDictionary = {
         "Проверка файлов на стороне Fastify по magic bytes",
         "Переиспользуемые контракты метаданных для будущих файлов рабочего пространства",
       ],
+    },
+    adminApiKeys: {
+      navLabel: "API-ключи",
+      eyebrow: "Админ",
+      title: "API-ключи расширения",
+      description: "Создавайте API-ключи, меняйте квоты, инвалидируйте ключи и смотрите историю генераций.",
+      highlights: ["Поиск API-ключа", "Аудит квоты", "Отчеты об ошибках"],
+      createTitle: "Создать API-ключ",
+      labelLabel: "Метка",
+      initialQuotaLabel: "Начальная квота",
+      createSubmit: "Создать ключ",
+      initialQuotaReason: "начальная квота",
+      createdCopyNotice: "API-ключ создан. Скопируйте его сейчас; повторно он показан не будет.",
+      rawApiKeyLabel: "Исходный API-ключ",
+      copy: "Копировать",
+      copied: "Скопировано",
+      findTitle: "Найти по значению API-ключа",
+      rawApiKeyInputLabel: "Исходный API-ключ",
+      findSubmit: "Найти ключ",
+      found: "API-ключ найден.",
+      notFound: "Ключ с таким значением не найден.",
+      recentTitle: "Последние API-ключи",
+      refresh: "Обновить",
+      filterLabel: "Фильтр по метке или id",
+      statusLabel: "Статус",
+      statusAll: "Все",
+      statusActive: "Активные",
+      statusInvalidated: "Инвалидированные",
+      columnLabel: "Метка",
+      columnStatus: "Статус",
+      columnQuota: "Квота",
+      columnCreated: "Создан",
+      open: "Открыть",
+      noMatches: "По текущим фильтрам API-ключи не найдены.",
+      showingSummary: "Показано {shown} из {filtered} отфильтрованных ключей ({loaded} загружено)",
+      previous: "Назад",
+      next: "Вперед",
+      pageSummary: "Страница {page} / {pageCount}",
+      selectedTitle: "Выбранный ключ",
+      idLabel: "ID",
+      quotaSummary: "Квота: использовано {used} / всего {total} / осталось {remaining}",
+      invalidatedAt: "Инвалидирован {date}",
+      quotaAmountLabel: "Размер квоты",
+      reasonLabel: "Причина",
+      addQuota: "Добавить квоту",
+      removeQuota: "Снять квоту",
+      invalidationReasonLabel: "Причина инвалидации",
+      invalidationConfirmLabel: "Вставьте id API-ключа для подтверждения инвалидации",
+      invalidationConfirmError: "Вставьте id выбранного API-ключа в поле подтверждения перед инвалидацией.",
+      invalidate: "Инвалидировать",
+      quotaEventsTitle: "События квоты",
+      noQuotaEvents: "Событий квоты нет.",
+      extensionUsersTitle: "Пользователи расширения",
+      noExtensionUsers: "Этот ключ еще не использовали пользователи расширения.",
+      userIdColumn: "ID пользователя",
+      firstSeenColumn: "Первое использование",
+      lastSeenColumn: "Последнее использование",
+      generationRequestsTitle: "Запросы генерации",
+      noGenerationRequests: "Запросов генерации нет.",
+      statusColumn: "Статус",
+      quotaConsumed: "списана",
+      quotaNotConsumed: "не списана",
+      recentErrorsTitle: "Последние ошибки",
+      noErrors: "Ошибок нет.",
+      loadKeysFailed: "Не удалось загрузить API-ключи.",
+      createFailed: "Не удалось создать API-ключ.",
+      detailFailed: "Не удалось загрузить детали API-ключа.",
+      findFailed: "Не удалось найти API-ключ.",
+      quotaUpdateFailed: "Не удалось обновить квоту.",
+      invalidateFailed: "Не удалось инвалидировать API-ключ.",
+      quotaUpdated: "Квота обновлена.",
+      invalidated: "API-ключ инвалидирован.",
     },
       moduleLab: {
         eyebrow: "Диагностика модулей",

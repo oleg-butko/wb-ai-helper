@@ -52,6 +52,7 @@
 - Hardened the minimal admin page by showing extension users and generation requests for the selected key, and by requiring API-key id confirmation before invalidation.
 - Added an admin-only app navigation item for `/[locale]/admin/api-keys`, guarded by the Supabase `admins` table check.
 - Added local filtering and pagination over the loaded admin API-key list.
+- Moved admin API-key page/card labels and messages into the English/Russian dictionaries.
 
 ## Verified
 
@@ -100,9 +101,7 @@ No required test tasks remain for the current slice.
 
 ### 2. Manual UI hardening
 
-The first admin page is intentionally minimal. Follow-up UI improvements:
-
-- improve Russian/English dictionaries instead of hardcoded admin labels.
+No required manual UI hardening tasks remain for the current slice.
 
 ### 3. Follow-up integration
 

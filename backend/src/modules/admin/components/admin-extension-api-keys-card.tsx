@@ -8,9 +8,11 @@ import type {
   AdminExtensionApiKeyListResponse,
   CreateAdminExtensionApiKeyResponse,
 } from "@/shared/api/admin-extension-api-keys";
+import type { SiteDictionary } from "@/lib/i18n/dictionaries";
 
 type ApiKeySummary = AdminExtensionApiKeyListResponse["apiKeys"][number];
 type ApiKeyDetail = AdminExtensionApiKeyDetailResponse["result"];
+type AdminApiKeysDictionary = SiteDictionary["app"]["adminApiKeys"];
 
 function getPayloadMessage(payload: unknown) {
   return typeof payload === "object" &&
@@ -28,7 +30,18 @@ function isCreateApiKeyResponse(payload: unknown): payload is CreateAdminExtensi
     typeof payload.rawApiKey === "string";
 }
 
-export function AdminExtensionApiKeysCard() {
+function formatMessage(template: string, values: Record<string, string | number>) {
+  return Object.entries(values).reduce(
+    (message, [key, value]) => message.replaceAll(`{${key}}`, String(value)),
+    template,
+  );
+}
+
+type AdminExtensionApiKeysCardProps = {
+  dictionary: AdminApiKeysDictionary;
+};
+
+export function AdminExtensionApiKeysCard({ dictionary }: AdminExtensionApiKeysCardProps) {
   const [apiKeys, setApiKeys] = useState<ApiKeySummary[]>([]);
   const [selectedDetail, setSelectedDetail] = useState<ApiKeyDetail | null>(null);
   const [createdRawKey, setCreatedRawKey] = useState<string | null>(null);
@@ -73,18 +86,18 @@ export function AdminExtensionApiKeysCard() {
     const payload = await response.json().catch(() => null);
 
     if (!response.ok) {
-      throw new Error(payload?.message ?? "Could not load API keys.");
+      throw new Error(payload?.message ?? dictionary.loadKeysFailed);
     }
 
     setApiKeys(payload.apiKeys ?? []);
     setPage(1);
-  }, []);
+  }, [dictionary.loadKeysFailed]);
 
   useEffect(() => {
     refreshList().catch((loadError) => {
-      setError(loadError instanceof Error ? loadError.message : "Could not load API keys.");
+      setError(loadError instanceof Error ? loadError.message : dictionary.loadKeysFailed);
     });
-  }, [refreshList]);
+  }, [dictionary.loadKeysFailed, refreshList]);
 
   async function createApiKey() {
     setLoading(true);
@@ -100,22 +113,22 @@ export function AdminExtensionApiKeysCard() {
         body: JSON.stringify({
           label: label || undefined,
           quota,
-          reason: "initial quota",
+          reason: dictionary.initialQuotaReason,
         }),
       });
       const payload = (await response.json().catch(() => null)) as CreateAdminExtensionApiKeyResponse | unknown;
 
       if (!response.ok || !isCreateApiKeyResponse(payload)) {
-        throw new Error(getPayloadMessage(payload) ?? "Could not create API key.");
+        throw new Error(getPayloadMessage(payload) ?? dictionary.createFailed);
       }
 
       setCreatedRawKey(payload.rawApiKey);
-      setFeedback("API key created. Copy it now; it will not be shown again.");
+      setFeedback(dictionary.createdCopyNotice);
       setLabel("");
       setQuota(10);
       await refreshList();
     } catch (createError) {
-      setError(createError instanceof Error ? createError.message : "Could not create API key.");
+      setError(createError instanceof Error ? createError.message : dictionary.createFailed);
     } finally {
       setLoading(false);
     }
@@ -133,12 +146,12 @@ export function AdminExtensionApiKeysCard() {
       const payload = await response.json().catch(() => null);
 
       if (!response.ok) {
-        throw new Error(payload?.message ?? "Could not load API key details.");
+        throw new Error(payload?.message ?? dictionary.detailFailed);
       }
 
       setSelectedDetail(payload.result);
     } catch (detailError) {
-      setError(detailError instanceof Error ? detailError.message : "Could not load API key details.");
+      setError(detailError instanceof Error ? detailError.message : dictionary.detailFailed);
     } finally {
       setLoading(false);
     }
@@ -162,13 +175,13 @@ export function AdminExtensionApiKeysCard() {
       const payload = await response.json().catch(() => null);
 
       if (!response.ok) {
-        throw new Error(payload?.message ?? "Could not find API key.");
+        throw new Error(payload?.message ?? dictionary.findFailed);
       }
 
       setSelectedDetail(payload.result);
-      setFeedback(payload.result ? "API key found." : "No API key matched that value.");
+      setFeedback(payload.result ? dictionary.found : dictionary.notFound);
     } catch (findError) {
-      setError(findError instanceof Error ? findError.message : "Could not find API key.");
+      setError(findError instanceof Error ? findError.message : dictionary.findFailed);
     } finally {
       setLoading(false);
     }
@@ -198,14 +211,14 @@ export function AdminExtensionApiKeysCard() {
       const payload = await response.json().catch(() => null);
 
       if (!response.ok) {
-        throw new Error(payload?.message ?? "Could not update quota.");
+        throw new Error(payload?.message ?? dictionary.quotaUpdateFailed);
       }
 
-      setFeedback("Quota updated.");
+      setFeedback(dictionary.quotaUpdated);
       await refreshList();
       await loadDetail(payload.apiKey.id);
     } catch (quotaError) {
-      setError(quotaError instanceof Error ? quotaError.message : "Could not update quota.");
+      setError(quotaError instanceof Error ? quotaError.message : dictionary.quotaUpdateFailed);
     } finally {
       setLoading(false);
     }
@@ -217,7 +230,7 @@ export function AdminExtensionApiKeysCard() {
     }
 
     if (invalidationConfirm !== selectedDetail.apiKey.id) {
-      setError("Paste the selected API key id into the confirmation field before invalidating.");
+      setError(dictionary.invalidationConfirmError);
       return;
     }
 
@@ -238,15 +251,15 @@ export function AdminExtensionApiKeysCard() {
       const payload = await response.json().catch(() => null);
 
       if (!response.ok) {
-        throw new Error(payload?.message ?? "Could not invalidate API key.");
+        throw new Error(payload?.message ?? dictionary.invalidateFailed);
       }
 
-      setFeedback("API key invalidated.");
+      setFeedback(dictionary.invalidated);
       setInvalidationConfirm("");
       await refreshList();
       await loadDetail(payload.apiKey.id);
     } catch (invalidateError) {
-      setError(invalidateError instanceof Error ? invalidateError.message : "Could not invalidate API key.");
+      setError(invalidateError instanceof Error ? invalidateError.message : dictionary.invalidateFailed);
     } finally {
       setLoading(false);
     }
@@ -260,12 +273,12 @@ export function AdminExtensionApiKeysCard() {
         <Alert color="yellow">
           <Group justify="space-between" align="center">
             <Text>
-              Raw API key: <code>{createdRawKey}</code>
+              {dictionary.rawApiKeyLabel}: <code>{createdRawKey}</code>
             </Text>
             <CopyButton value={createdRawKey}>
               {({ copied, copy }) => (
                 <Button size="xs" onClick={copy}>
-                  {copied ? "Copied" : "Copy"}
+                  {copied ? dictionary.copied : dictionary.copy}
                 </Button>
               )}
             </CopyButton>
@@ -275,30 +288,30 @@ export function AdminExtensionApiKeysCard() {
 
       <Card withBorder radius="lg" p="lg">
         <Stack gap="md">
-          <Title order={3}>Create API key</Title>
-          <TextInput label="Label" value={label} onChange={(event) => setLabel(event.currentTarget.value)} />
-          <NumberInput label="Initial quota" min={0} max={1_000_000} value={quota} onChange={(value) => setQuota(Number(value) || 0)} />
-          <Button loading={loading} onClick={createApiKey}>Create key</Button>
+          <Title order={3}>{dictionary.createTitle}</Title>
+          <TextInput label={dictionary.labelLabel} value={label} onChange={(event) => setLabel(event.currentTarget.value)} />
+          <NumberInput label={dictionary.initialQuotaLabel} min={0} max={1_000_000} value={quota} onChange={(value) => setQuota(Number(value) || 0)} />
+          <Button loading={loading} onClick={createApiKey}>{dictionary.createSubmit}</Button>
         </Stack>
       </Card>
 
       <Card withBorder radius="lg" p="lg">
         <Stack gap="md">
-          <Title order={3}>Find by API key value</Title>
-          <Textarea label="Raw API key" value={searchKey} onChange={(event) => setSearchKey(event.currentTarget.value)} />
-          <Button loading={loading} onClick={findByValue}>Find key</Button>
+          <Title order={3}>{dictionary.findTitle}</Title>
+          <Textarea label={dictionary.rawApiKeyInputLabel} value={searchKey} onChange={(event) => setSearchKey(event.currentTarget.value)} />
+          <Button loading={loading} onClick={findByValue}>{dictionary.findSubmit}</Button>
         </Stack>
       </Card>
 
       <Card withBorder radius="lg" p="lg">
         <Stack gap="md">
           <Group justify="space-between">
-            <Title order={3}>Recent API keys</Title>
-            <Button variant="light" loading={loading} onClick={() => refreshList()}>Refresh</Button>
+            <Title order={3}>{dictionary.recentTitle}</Title>
+            <Button variant="light" loading={loading} onClick={() => refreshList()}>{dictionary.refresh}</Button>
           </Group>
           <Group grow align="end">
             <TextInput
-              label="Filter by label or id"
+              label={dictionary.filterLabel}
               value={listFilter}
               onChange={(event) => {
                 setListFilter(event.currentTarget.value);
@@ -306,16 +319,16 @@ export function AdminExtensionApiKeysCard() {
               }}
             />
             <Select
-              label="Status"
+              label={dictionary.statusLabel}
               value={statusFilter}
               onChange={(value) => {
                 setStatusFilter(value === "active" || value === "invalidated" ? value : "all");
                 setPage(1);
               }}
               data={[
-                { value: "all", label: "All" },
-                { value: "active", label: "Active" },
-                { value: "invalidated", label: "Invalidated" },
+                { value: "all", label: dictionary.statusAll },
+                { value: "active", label: dictionary.statusActive },
+                { value: "invalidated", label: dictionary.statusInvalidated },
               ]}
             />
           </Group>
@@ -323,10 +336,10 @@ export function AdminExtensionApiKeysCard() {
             <Table verticalSpacing="sm">
               <Table.Thead>
                 <Table.Tr>
-                  <Table.Th>Label</Table.Th>
-                  <Table.Th>Status</Table.Th>
-                  <Table.Th>Quota</Table.Th>
-                  <Table.Th>Created</Table.Th>
+                  <Table.Th>{dictionary.columnLabel}</Table.Th>
+                  <Table.Th>{dictionary.columnStatus}</Table.Th>
+                  <Table.Th>{dictionary.columnQuota}</Table.Th>
+                  <Table.Th>{dictionary.columnCreated}</Table.Th>
                   <Table.Th />
                 </Table.Tr>
               </Table.Thead>
@@ -336,23 +349,27 @@ export function AdminExtensionApiKeysCard() {
                     <Table.Td>{apiKey.label ?? apiKey.id}</Table.Td>
                     <Table.Td>
                       <Badge color={apiKey.invalidatedAt ? "red" : "green"}>
-                        {apiKey.invalidatedAt ? "invalidated" : "active"}
+                        {apiKey.invalidatedAt ? dictionary.statusInvalidated : dictionary.statusActive}
                       </Badge>
                     </Table.Td>
                     <Table.Td>{apiKey.quotaUsed} / {apiKey.quotaTotal}</Table.Td>
                     <Table.Td>{apiKey.createdAt ?? "—"}</Table.Td>
                     <Table.Td>
-                      <Button size="xs" variant="light" loading={loading} onClick={() => loadDetail(apiKey.id)}>Open</Button>
+                      <Button size="xs" variant="light" loading={loading} onClick={() => loadDetail(apiKey.id)}>{dictionary.open}</Button>
                     </Table.Td>
                   </Table.Tr>
                 ))}
               </Table.Tbody>
             </Table>
           </Table.ScrollContainer>
-          {filteredApiKeys.length === 0 ? <Text c="dimmed">No API keys match the current filters.</Text> : null}
+          {filteredApiKeys.length === 0 ? <Text c="dimmed">{dictionary.noMatches}</Text> : null}
           <Group justify="space-between">
             <Text size="sm" c="dimmed">
-              Showing {pagedApiKeys.length} of {filteredApiKeys.length} filtered keys ({apiKeys.length} loaded)
+              {formatMessage(dictionary.showingSummary, {
+                shown: pagedApiKeys.length,
+                filtered: filteredApiKeys.length,
+                loaded: apiKeys.length,
+              })}
             </Text>
             <Group gap="xs">
               <Button
@@ -361,10 +378,10 @@ export function AdminExtensionApiKeysCard() {
                 disabled={currentPage <= 1}
                 onClick={() => setPage((value) => Math.max(value - 1, 1))}
               >
-                Previous
+                {dictionary.previous}
               </Button>
               <Text size="sm">
-                Page {currentPage} / {pageCount}
+                {formatMessage(dictionary.pageSummary, { page: currentPage, pageCount })}
               </Text>
               <Button
                 size="xs"
@@ -372,7 +389,7 @@ export function AdminExtensionApiKeysCard() {
                 disabled={currentPage >= pageCount}
                 onClick={() => setPage((value) => Math.min(value + 1, pageCount))}
               >
-                Next
+                {dictionary.next}
               </Button>
             </Group>
           </Group>
@@ -382,34 +399,38 @@ export function AdminExtensionApiKeysCard() {
       {selectedDetail ? (
         <Card withBorder radius="lg" p="lg">
           <Stack gap="md">
-            <Title order={3}>Selected key</Title>
-            <Text>ID: <code>{selectedDetail.apiKey.id}</code></Text>
+            <Title order={3}>{dictionary.selectedTitle}</Title>
+            <Text>{dictionary.idLabel}: <code>{selectedDetail.apiKey.id}</code></Text>
             <Group gap="sm">
               <Badge color={selectedDetail.apiKey.invalidatedAt ? "red" : "green"}>
-                {selectedDetail.apiKey.invalidatedAt ? "invalidated" : "active"}
+                {selectedDetail.apiKey.invalidatedAt ? dictionary.statusInvalidated : dictionary.statusActive}
               </Badge>
               <Text size="sm">
-                Quota: {selectedDetail.apiKey.quotaUsed} used / {selectedDetail.apiKey.quotaTotal} total / {selectedDetail.apiKey.quotaRemaining} remaining
+                {formatMessage(dictionary.quotaSummary, {
+                  used: selectedDetail.apiKey.quotaUsed,
+                  total: selectedDetail.apiKey.quotaTotal,
+                  remaining: selectedDetail.apiKey.quotaRemaining,
+                })}
               </Text>
             </Group>
             {selectedDetail.apiKey.invalidatedAt ? (
               <Text c="red" size="sm">
-                Invalidated at {selectedDetail.apiKey.invalidatedAt}
+                {formatMessage(dictionary.invalidatedAt, { date: selectedDetail.apiKey.invalidatedAt })}
                 {selectedDetail.apiKey.invalidationReason ? ` (${selectedDetail.apiKey.invalidationReason})` : ""}
               </Text>
             ) : null}
 
             <Group align="end">
-              <NumberInput label="Quota amount" min={1} max={1_000_000} value={quotaAmount} onChange={(value) => setQuotaAmount(Number(value) || 1)} />
-              <TextInput label="Reason" value={quotaReason} onChange={(event) => setQuotaReason(event.currentTarget.value)} />
-              <Button loading={loading} onClick={() => adjustQuota("grant")}>Add quota</Button>
-              <Button color="orange" loading={loading} onClick={() => adjustQuota("remove")}>Remove quota</Button>
+              <NumberInput label={dictionary.quotaAmountLabel} min={1} max={1_000_000} value={quotaAmount} onChange={(value) => setQuotaAmount(Number(value) || 1)} />
+              <TextInput label={dictionary.reasonLabel} value={quotaReason} onChange={(event) => setQuotaReason(event.currentTarget.value)} />
+              <Button loading={loading} onClick={() => adjustQuota("grant")}>{dictionary.addQuota}</Button>
+              <Button color="orange" loading={loading} onClick={() => adjustQuota("remove")}>{dictionary.removeQuota}</Button>
             </Group>
 
             <Stack gap="xs">
-              <TextInput label="Invalidation reason" value={invalidationReason} onChange={(event) => setInvalidationReason(event.currentTarget.value)} />
+              <TextInput label={dictionary.invalidationReasonLabel} value={invalidationReason} onChange={(event) => setInvalidationReason(event.currentTarget.value)} />
               <TextInput
-                label="Paste API key id to confirm invalidation"
+                label={dictionary.invalidationConfirmLabel}
                 value={invalidationConfirm}
                 onChange={(event) => setInvalidationConfirm(event.currentTarget.value)}
               />
@@ -419,28 +440,28 @@ export function AdminExtensionApiKeysCard() {
                 disabled={Boolean(selectedDetail.apiKey.invalidatedAt)}
                 onClick={invalidateKey}
               >
-                Invalidate
+                {dictionary.invalidate}
               </Button>
             </Stack>
 
-            <Title order={4}>Quota events</Title>
-            {selectedDetail.quotaEvents.length === 0 ? <Text c="dimmed">No quota events.</Text> : null}
+            <Title order={4}>{dictionary.quotaEventsTitle}</Title>
+            {selectedDetail.quotaEvents.length === 0 ? <Text c="dimmed">{dictionary.noQuotaEvents}</Text> : null}
             {selectedDetail.quotaEvents.map((event) => (
               <Text key={event.id} size="sm">
                 {event.createdAt}: {event.eventType} {event.amount} {event.reason ? `(${event.reason})` : ""}
               </Text>
             ))}
 
-            <Title order={4}>Extension users</Title>
-            {selectedDetail.users.length === 0 ? <Text c="dimmed">No extension users have used this key.</Text> : null}
+            <Title order={4}>{dictionary.extensionUsersTitle}</Title>
+            {selectedDetail.users.length === 0 ? <Text c="dimmed">{dictionary.noExtensionUsers}</Text> : null}
             {selectedDetail.users.length > 0 ? (
               <Table.ScrollContainer minWidth={640}>
                 <Table verticalSpacing="xs">
                   <Table.Thead>
                     <Table.Tr>
-                      <Table.Th>User ID</Table.Th>
-                      <Table.Th>First seen</Table.Th>
-                      <Table.Th>Last seen</Table.Th>
+                      <Table.Th>{dictionary.userIdColumn}</Table.Th>
+                      <Table.Th>{dictionary.firstSeenColumn}</Table.Th>
+                      <Table.Th>{dictionary.lastSeenColumn}</Table.Th>
                     </Table.Tr>
                   </Table.Thead>
                   <Table.Tbody>
@@ -456,17 +477,17 @@ export function AdminExtensionApiKeysCard() {
               </Table.ScrollContainer>
             ) : null}
 
-            <Title order={4}>Generation requests</Title>
-            {selectedDetail.requests.length === 0 ? <Text c="dimmed">No generation requests.</Text> : null}
+            <Title order={4}>{dictionary.generationRequestsTitle}</Title>
+            {selectedDetail.requests.length === 0 ? <Text c="dimmed">{dictionary.noGenerationRequests}</Text> : null}
             {selectedDetail.requests.length > 0 ? (
               <Table.ScrollContainer minWidth={720}>
                 <Table verticalSpacing="xs">
                   <Table.Thead>
                     <Table.Tr>
-                      <Table.Th>Created</Table.Th>
-                      <Table.Th>Status</Table.Th>
-                      <Table.Th>Quota</Table.Th>
-                      <Table.Th>User ID</Table.Th>
+                      <Table.Th>{dictionary.columnCreated}</Table.Th>
+                      <Table.Th>{dictionary.statusColumn}</Table.Th>
+                      <Table.Th>{dictionary.columnQuota}</Table.Th>
+                      <Table.Th>{dictionary.userIdColumn}</Table.Th>
                     </Table.Tr>
                   </Table.Thead>
                   <Table.Tbody>
@@ -478,7 +499,7 @@ export function AdminExtensionApiKeysCard() {
                             {request.status}
                           </Badge>
                         </Table.Td>
-                        <Table.Td>{request.quotaConsumed ? "consumed" : "not consumed"}</Table.Td>
+                        <Table.Td>{request.quotaConsumed ? dictionary.quotaConsumed : dictionary.quotaNotConsumed}</Table.Td>
                         <Table.Td><code>{request.extensionUserId}</code></Table.Td>
                       </Table.Tr>
                     ))}
@@ -487,8 +508,8 @@ export function AdminExtensionApiKeysCard() {
               </Table.ScrollContainer>
             ) : null}
 
-            <Title order={4}>Recent errors</Title>
-            {selectedDetail.errors.length === 0 ? <Text c="dimmed">No errors.</Text> : null}
+            <Title order={4}>{dictionary.recentErrorsTitle}</Title>
+            {selectedDetail.errors.length === 0 ? <Text c="dimmed">{dictionary.noErrors}</Text> : null}
             {selectedDetail.errors.map((item) => (
               <Text key={item.id} size="sm" c="red">
                 {item.createdAt}: {item.errorCode} — {item.errorMessage}
