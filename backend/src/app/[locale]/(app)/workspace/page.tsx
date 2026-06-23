@@ -10,7 +10,7 @@ import { WorkspaceFilesCard } from "@/modules/workspace-files/components/workspa
 import { WorkspaceAccessOverviewCard } from "@/modules/workspaces/components/workspace-access-overview-card";
 import { WorkspaceMembersCard } from "@/modules/workspaces/components/workspace-members-card";
 import { WorkspaceModuleLabAccessCard } from "@/modules/workspaces/components/workspace-module-lab-access-card";
-import { isAppAdminEmail } from "@/shared/admin/app-admin";
+import { isAdminEmail } from "@/lib/admin";
 
 type PageProps = {
   params: Promise<{
@@ -38,36 +38,40 @@ export default async function WorkspacePage({ params }: PageProps) {
   return renderAuthenticatedAppPage({
     params,
     signInPath: (locale) => `/${locale}/sign-in`,
-    render: ({ locale, dictionary, user }) => (
-      <CoreAppPageShell
-        locale={locale}
-        dictionary={dictionary}
-        user={user}
-        surface={{
-          eyebrow: dictionary.app.workspace.eyebrow,
-          title: dictionary.app.workspace.title,
-          description: dictionary.app.workspace.description,
-          highlights: dictionary.app.workspace.highlights,
-        }}
-      >
-        <WorkspaceAccessOverviewCard
-          dictionary={dictionary.app.workspace}
-          sharedDictionary={dictionary.app.shared}
+    async render({ locale, dictionary, user }) {
+      const isAppAdmin = await isAdminEmail(user.email);
+
+      return (
+        <CoreAppPageShell
           locale={locale}
-          isAppAdmin={isAppAdminEmail(user.email)}
-          moduleLabEnabled={moduleLabEnabled}
-        />
-        <WorkspaceMembersCard
-          dictionary={dictionary.app.workspace}
-          sharedDictionary={dictionary.app.shared}
-        />
-        {moduleLabEnabled ? (
-          <WorkspaceModuleLabAccessCard dictionary={dictionary.app.workspace} />
-        ) : null}
-        {workspaceFilesEnabled ? (
-          <WorkspaceFilesCard dictionary={dictionary.app.workspace} />
-        ) : null}
-      </CoreAppPageShell>
-    ),
+          dictionary={dictionary}
+          user={user}
+          surface={{
+            eyebrow: dictionary.app.workspace.eyebrow,
+            title: dictionary.app.workspace.title,
+            description: dictionary.app.workspace.description,
+            highlights: dictionary.app.workspace.highlights,
+          }}
+        >
+          <WorkspaceAccessOverviewCard
+            dictionary={dictionary.app.workspace}
+            sharedDictionary={dictionary.app.shared}
+            locale={locale}
+            isAppAdmin={isAppAdmin}
+            moduleLabEnabled={moduleLabEnabled}
+          />
+          <WorkspaceMembersCard
+            dictionary={dictionary.app.workspace}
+            sharedDictionary={dictionary.app.shared}
+          />
+          {moduleLabEnabled ? (
+            <WorkspaceModuleLabAccessCard dictionary={dictionary.app.workspace} />
+          ) : null}
+          {workspaceFilesEnabled ? (
+            <WorkspaceFilesCard dictionary={dictionary.app.workspace} />
+          ) : null}
+        </CoreAppPageShell>
+      );
+    },
   });
 }

@@ -13,6 +13,10 @@ export const getAuthenticatedUser = cache(async (): Promise<AuthenticatedUser | 
     return null;
   }
 
+  if (user.app_metadata?.account_type === "extension") {
+    return null;
+  }
+
   const { data: profile } = await supabase
     .from("profiles")
     .select("username, full_name, avatar_url")

@@ -56,6 +56,7 @@ export const testSuites = {
     label: "test:api:routes",
     children: [
       "api:routes:account",
+      "api:routes:extension",
       "api:routes:workspaces",
       "api:routes:workspace-files",
       "api:queue-service",
@@ -64,6 +65,10 @@ export const testSuites = {
   "api:routes:account": {
     label: "test:api:routes:account",
     ...nodeScript("scripts/run-node-with-warning-filter.mjs", "api/tests/account-routes.test.mjs"),
+  },
+  "api:routes:extension": {
+    label: "test:api:routes:extension",
+    ...nodeScript("scripts/run-node-with-warning-filter.mjs", "api/tests/extension-routes.test.mjs"),
   },
   "api:routes:workspaces": {
     label: "test:api:routes:workspaces",

@@ -2,7 +2,6 @@ import {
   updateWorkspaceMemberRoleRequestSchema,
   updateWorkspaceModuleRoleRequestSchema,
 } from "../../src/shared/api/workspaces.mjs";
-import { isAppAdminEmail } from "../../src/shared/admin/app-admin.mjs";
 import { resolveAuthenticatedRequest } from "../lib/auth.mjs";
 
 function mapAdminWorkspaceError(error, reply, fallback) {
@@ -45,7 +44,7 @@ async function resolveAppAdminRequest(request, reply) {
     return authentication;
   }
 
-  if (!isAppAdminEmail(authentication.user.email)) {
+  if (!(await request.server.services.isAppAdminEmail(authentication.user.email))) {
     return {
       ok: false,
       response: reply.code(403).send({

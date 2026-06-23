@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import { createClient } from "@supabase/supabase-js";
 
 import { assertApiEnv, getApiConfig } from "../config.mjs";
@@ -118,6 +120,51 @@ function assertAdminModuleId(moduleId) {
     error.code = "workspace_module_invalid";
     throw error;
   }
+}
+
+function hashExtensionApiKey(apiKey) {
+  return createHash("sha256").update(apiKey, "utf8").digest("hex");
+}
+
+function getExtensionUserEmail(userId) {
+  return `${userId}@extension.com`;
+}
+
+function mapExtensionApiKeyRecord(item) {
+  const quotaTotal = Number(item.quota_total ?? 0);
+  const quotaUsed = Number(item.quota_used ?? 0);
+  return {
+    id: item.id,
+    label: item.label ?? null,
+    quotaTotal,
+    quotaUsed,
+    quotaRemaining: Math.max(quotaTotal - quotaUsed, 0),
+    invalidatedAt: item.invalidated_at ?? null,
+    createdAt: item.created_at ?? null,
+    updatedAt: item.updated_at ?? null,
+  };
+}
+
+function mapConsumedExtensionQuotaRecord(item) {
+  const quotaTotal = Number(item.quota_total ?? 0);
+  const quotaUsed = Number(item.quota_used ?? 0);
+  return {
+    apiKeyId: item.api_key_id ?? item.id,
+    quotaTotal,
+    quotaUsed,
+    quotaRemaining: Math.max(quotaTotal - quotaUsed, 0),
+  };
+}
+
+function mapExtensionGenerationRequestRecord(item) {
+  return {
+    id: item.id,
+    apiKeyId: item.api_key_id ?? null,
+    extensionUserId: item.extension_user_id ?? null,
+    status: item.status,
+    quotaConsumed: Boolean(item.quota_consumed),
+    createdAt: item.created_at ?? null,
+  };
 }
 
 
@@ -566,6 +613,26 @@ export function createApiServices(config = getApiConfig(), overrides = {}) {
 
       return (data ?? []).map(mapAdminWorkspaceRecord);
     },
+    async isAppAdminEmail(email) {
+      const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
+
+      if (!normalizedEmail) {
+        return false;
+      }
+
+      const { data, error } = await adminClient
+        .from("admins")
+        .select("email, disabled_at")
+        .eq("email", normalizedEmail)
+        .is("disabled_at", null)
+        .maybeSingle();
+
+      if (error) {
+        throw error;
+      }
+
+      return Boolean(data);
+    },
     async listAdminWorkspaceMembers({ workspaceId }) {
       return await buildWorkspaceMemberSummaryList(workspaceId);
     },
@@ -960,6 +1027,267 @@ export function createApiServices(config = getApiConfig(), overrides = {}) {
       }
 
       return typeof data?.role === "string" ? data.role : null;
+    },
+    async resolveExtensionApiKey({ apiKey }) {
+      const keyHash = hashExtensionApiKey(apiKey);
+      const { data, error } = await adminClient
+        .from("extension_api_keys")
+        .select("id, label, quota_total, quota_used, invalidated_at, created_at, updated_at")
+        .eq("key_hash", keyHash)
+        .maybeSingle();
+
+      if (error) {
+        throw error;
+      }
+
+      return data ? mapExtensionApiKeyRecord(data) : null;
+    },
+    async createExtensionGenerationRequest({
+      apiKeyId,
+      extensionUserId,
+      requestPayload,
+      status,
+    }) {
+      const { data, error } = await adminClient
+        .from("extension_generation_requests")
+        .insert({
+          api_key_id: apiKeyId,
+          extension_user_id: extensionUserId,
+          request_payload: requestPayload,
+          status,
+          quota_consumed: false,
+        })
+        .select("id, api_key_id, extension_user_id, status, quota_consumed, created_at")
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      return mapExtensionGenerationRequestRecord(data);
+    },
+    async updateExtensionGenerationRequest({
+      requestId,
+      status,
+      responsePayload,
+      quotaConsumed,
+    }) {
+      const { data, error } = await adminClient
+        .from("extension_generation_requests")
+        .update({
+          status,
+          response_payload: responsePayload,
+          quota_consumed: quotaConsumed,
+        })
+        .eq("id", requestId)
+        .select("id, api_key_id, extension_user_id, status, quota_consumed, created_at")
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      return mapExtensionGenerationRequestRecord(data);
+    },
+    async recordExtensionGenerationEvent({
+      requestId,
+      apiKeyId,
+      extensionUserId,
+      eventType,
+      details = {},
+    }) {
+      const { error } = await adminClient
+        .from("extension_generation_events")
+        .insert({
+          request_id: requestId,
+          api_key_id: apiKeyId,
+          extension_user_id: extensionUserId,
+          event_type: eventType,
+          details,
+        });
+
+      if (error) {
+        throw error;
+      }
+    },
+    async recordExtensionError({
+      requestId = null,
+      apiKeyId = null,
+      extensionUserId = null,
+      errorCode,
+      errorMessage,
+      errorDetails = {},
+    }) {
+      const { error } = await adminClient
+        .from("extension_errors")
+        .insert({
+          request_id: requestId,
+          api_key_id: apiKeyId,
+          extension_user_id: extensionUserId,
+          error_code: errorCode,
+          error_message: errorMessage,
+          error_details: errorDetails,
+        });
+
+      if (error) {
+        throw error;
+      }
+    },
+    async ensureExtensionUser({ userId, apiKey, apiKeyId }) {
+      const email = getExtensionUserEmail(userId);
+      let created = false;
+      let authUser = null;
+
+      const existingUserResponse = await adminClient.auth.admin.getUserById(userId);
+
+      if (existingUserResponse.data?.user) {
+        authUser = existingUserResponse.data.user;
+      } else {
+        const createResponse = await adminClient.auth.admin.createUser({
+          id: userId,
+          email,
+          password: apiKey,
+          email_confirm: true,
+          app_metadata: {
+            account_type: "extension",
+          },
+        });
+
+        if (createResponse.error || !createResponse.data?.user) {
+          const error = new Error(
+            createResponse.error?.message ?? "The extension auth user could not be created.",
+          );
+          error.code = "extension_user_create_failed";
+          throw error;
+        }
+
+        authUser = createResponse.data.user;
+        created = true;
+      }
+
+      const extensionUserResponse = await adminClient
+        .from("extension_users")
+        .insert(
+          {
+            user_id: userId,
+            email,
+            first_api_key_id: apiKeyId,
+            last_seen_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id", ignoreDuplicates: true },
+        );
+
+      if (extensionUserResponse.error) {
+        throw extensionUserResponse.error;
+      }
+
+      const extensionUserSeenResponse = await adminClient
+        .from("extension_users")
+        .update({ last_seen_at: new Date().toISOString() })
+        .eq("user_id", userId);
+
+      if (extensionUserSeenResponse.error) {
+        throw extensionUserSeenResponse.error;
+      }
+
+      const apiKeyUserResponse = await adminClient
+        .from("extension_api_key_users")
+        .upsert(
+          {
+            api_key_id: apiKeyId,
+            extension_user_id: userId,
+            last_seen_at: new Date().toISOString(),
+          },
+          { onConflict: "api_key_id,extension_user_id" },
+        );
+
+      if (apiKeyUserResponse.error) {
+        throw apiKeyUserResponse.error;
+      }
+
+      return {
+        id: authUser.id,
+        email: authUser.email ?? email,
+        created,
+      };
+    },
+    async consumeExtensionApiQuota({
+      apiKeyId,
+      requestId,
+      amount = 1,
+      reason = "generation_succeeded",
+    }) {
+      const { data, error } = await adminClient.rpc("consume_extension_api_key_quota", {
+        p_api_key_id: apiKeyId,
+        p_amount: amount,
+        p_request_id: requestId,
+        p_reason: reason,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      const record = Array.isArray(data) ? data[0] : data;
+      return record ? mapConsumedExtensionQuotaRecord(record) : null;
+    },
+    async findExtensionApiKeyByValue({ apiKey }) {
+      const apiKeyRecord = await this.resolveExtensionApiKey({ apiKey });
+
+      if (!apiKeyRecord) {
+        return null;
+      }
+
+      const [
+        quotaEventsResponse,
+        usersResponse,
+        requestsResponse,
+        errorsResponse,
+      ] = await Promise.all([
+        adminClient
+          .from("extension_api_key_quota_events")
+          .select("id, event_type, amount, reason, created_at, created_by_admin_user_id")
+          .eq("api_key_id", apiKeyRecord.id)
+          .order("created_at", { ascending: false })
+          .limit(100),
+        adminClient
+          .from("extension_api_key_users")
+          .select("extension_user_id, first_seen_at, last_seen_at")
+          .eq("api_key_id", apiKeyRecord.id)
+          .order("last_seen_at", { ascending: false })
+          .limit(100),
+        adminClient
+          .from("extension_generation_requests")
+          .select("id, extension_user_id, status, quota_consumed, created_at")
+          .eq("api_key_id", apiKeyRecord.id)
+          .order("created_at", { ascending: false })
+          .limit(100),
+        adminClient
+          .from("extension_errors")
+          .select("id, request_id, extension_user_id, error_code, error_message, created_at")
+          .eq("api_key_id", apiKeyRecord.id)
+          .order("created_at", { ascending: false })
+          .limit(100),
+      ]);
+
+      for (const response of [
+        quotaEventsResponse,
+        usersResponse,
+        requestsResponse,
+        errorsResponse,
+      ]) {
+        if (response.error) {
+          throw response.error;
+        }
+      }
+
+      return {
+        apiKey: apiKeyRecord,
+        quotaEvents: quotaEventsResponse.data ?? [],
+        users: usersResponse.data ?? [],
+        requests: requestsResponse.data ?? [],
+        errors: errorsResponse.data ?? [],
+      };
     },
     async listWorkspaceFiles({ workspaceId }) {
       const { data, error } = await adminClient

@@ -12,6 +12,9 @@ function createServices(overrides = {}) {
         email: "admin@example.com",
       };
     },
+    async isAppAdminEmail() {
+      return true;
+    },
     async listAdminWorkspaces() {
       return [];
     },
@@ -45,79 +48,56 @@ function createServices(overrides = {}) {
   };
 }
 
-async function withAppAdminEmails(value, fn) {
-  const originalValue = process.env.APP_ADMIN_EMAILS;
+await runCase("admin workspace routes reject requests without authorization", async () => {
+  const app = buildApiApp({
+    services: createServices(),
+  });
 
   try {
-    if (value === undefined) {
-      delete process.env.APP_ADMIN_EMAILS;
-    } else {
-      process.env.APP_ADMIN_EMAILS = value;
-    }
-
-    await fn();
-  } finally {
-    if (originalValue === undefined) {
-      delete process.env.APP_ADMIN_EMAILS;
-    } else {
-      process.env.APP_ADMIN_EMAILS = originalValue;
-    }
-  }
-}
-
-
-await runCase("admin workspace routes reject requests without authorization", async () => {
-  await withAppAdminEmails("admin@example.com", async () => {
-    const app = buildApiApp({
-      services: createServices(),
+    const response = await app.inject({
+      method: "GET",
+      url: "/v1/admin/workspaces",
     });
 
-    try {
-      const response = await app.inject({
-        method: "GET",
-        url: "/v1/admin/workspaces",
-      });
-
-      assert.equal(response.statusCode, 401);
-      assert.equal(response.json().error, "authorization_required");
-    } finally {
-      await app.close();
-    }
-  });
+    assert.equal(response.statusCode, 401);
+    assert.equal(response.json().error, "authorization_required");
+  } finally {
+    await app.close();
+  }
 });
 
-await runCase("admin workspace routes require an app-admin email", async () => {
-  await withAppAdminEmails("other@example.com", async () => {
-    let serviceCalled = false;
-    const app = buildApiApp({
-      services: createServices({
-        async listAdminWorkspaces() {
-          serviceCalled = true;
-          return [];
-        },
-      }),
+await runCase("admin workspace routes require an app-admin database row", async () => {
+  let serviceCalled = false;
+  const app = buildApiApp({
+    services: createServices({
+      async isAppAdminEmail() {
+        return false;
+      },
+      async listAdminWorkspaces() {
+        serviceCalled = true;
+        return [];
+      },
+    }),
+  });
+
+  try {
+    const response = await app.inject({
+      method: "GET",
+      url: "/v1/admin/workspaces",
+      headers: {
+        authorization: "Bearer valid-token",
+      },
     });
 
-    try {
-      const response = await app.inject({
-        method: "GET",
-        url: "/v1/admin/workspaces",
-        headers: {
-          authorization: "Bearer valid-token",
-        },
-      });
-
-      assert.equal(response.statusCode, 403);
-      assert.equal(response.json().error, "app_admin_required");
-      assert.equal(serviceCalled, false);
-    } finally {
-      await app.close();
-    }
-  });
+    assert.equal(response.statusCode, 403);
+    assert.equal(response.json().error, "app_admin_required");
+    assert.equal(serviceCalled, false);
+  } finally {
+    await app.close();
+  }
 });
 
 await runCase("GET /v1/admin/workspaces forwards limit to the admin service", async () => {
-  await withAppAdminEmails("admin@example.com", async () => {
     const calls = [];
     const app = buildApiApp({
       services: createServices({
@@ -151,11 +131,9 @@ await runCase("GET /v1/admin/workspaces forwards limit to the admin service", as
     } finally {
       await app.close();
     }
-  });
 });
 
 await runCase("GET /v1/admin/workspaces/:workspaceId/members forwards to the admin service", async () => {
-  await withAppAdminEmails("admin@example.com", async () => {
     const calls = [];
     const app = buildApiApp({
       services: createServices({
@@ -190,11 +168,9 @@ await runCase("GET /v1/admin/workspaces/:workspaceId/members forwards to the adm
     } finally {
       await app.close();
     }
-  });
 });
 
 await runCase("PATCH /v1/admin/workspaces/:workspaceId/members/:userId forwards role updates", async () => {
-  await withAppAdminEmails("admin@example.com", async () => {
     const calls = [];
     const app = buildApiApp({
       services: createServices({
@@ -236,11 +212,9 @@ await runCase("PATCH /v1/admin/workspaces/:workspaceId/members/:userId forwards 
     } finally {
       await app.close();
     }
-  });
 });
 
 await runCase("PATCH admin member route rejects invalid roles", async () => {
-  await withAppAdminEmails("admin@example.com", async () => {
     let serviceCalled = false;
     const app = buildApiApp({
       services: createServices({
@@ -269,132 +243,127 @@ await runCase("PATCH admin member route rejects invalid roles", async () => {
     } finally {
       await app.close();
     }
-  });
 });
 
 await runCase("PATCH admin member route maps owner-protected service errors", async () => {
-  await withAppAdminEmails("admin@example.com", async () => {
-    const app = buildApiApp({
-      services: createServices({
-        async updateAdminWorkspaceMemberRole() {
-          const error = new Error("owner protected");
-          error.code = "workspace_member_owner_protected";
-          throw error;
-        },
-      }),
+  const app = buildApiApp({
+    services: createServices({
+      async updateAdminWorkspaceMemberRole() {
+        const error = new Error("owner protected");
+        error.code = "workspace_member_owner_protected";
+        throw error;
+      },
+    }),
+  });
+
+  try {
+    const response = await app.inject({
+      method: "PATCH",
+      url: "/v1/admin/workspaces/workspace-1/members/owner-1",
+      headers: {
+        authorization: "Bearer valid-token",
+      },
+      payload: {
+        role: "admin",
+      },
     });
 
-    try {
-      const response = await app.inject({
-        method: "PATCH",
-        url: "/v1/admin/workspaces/workspace-1/members/owner-1",
-        headers: {
-          authorization: "Bearer valid-token",
-        },
-        payload: {
-          role: "admin",
-        },
-      });
-
-      assert.equal(response.statusCode, 400);
-      assert.equal(response.json().error, "workspace_member_owner_protected");
-    } finally {
-      await app.close();
-    }
-  });
+    assert.equal(response.statusCode, 400);
+    assert.equal(response.json().error, "workspace_member_owner_protected");
+  } finally {
+    await app.close();
+  }
 });
 
 await runCase("admin module-lab routes list, update, and delete roles", async () => {
-  await withAppAdminEmails("admin@example.com", async () => {
-    const calls = [];
-    const app = buildApiApp({
-      services: createServices({
-        async listAdminWorkspaceModuleRoles(input) {
-          calls.push(["list", input]);
-          return [
-            {
-              workspaceId: "workspace-1",
-              userId: "member-2",
-              moduleId: "module-lab",
-              role: "viewer",
-            },
-          ];
-        },
-        async updateAdminWorkspaceModuleRole(input) {
-          calls.push(["update", input]);
-          return {
+  const calls = [];
+  const app = buildApiApp({
+    services: createServices({
+      async listAdminWorkspaceModuleRoles(input) {
+        calls.push(["list", input]);
+        return [
+          {
             workspaceId: "workspace-1",
             userId: "member-2",
             moduleId: "module-lab",
-            role: "operator",
-          };
-        },
-        async deleteAdminWorkspaceModuleRole(input) {
-          calls.push(["delete", input]);
-        },
-      }),
+            role: "viewer",
+          },
+        ];
+      },
+      async updateAdminWorkspaceModuleRole(input) {
+        calls.push(["update", input]);
+        return {
+          workspaceId: "workspace-1",
+          userId: "member-2",
+          moduleId: "module-lab",
+          role: "operator",
+        };
+      },
+      async deleteAdminWorkspaceModuleRole(input) {
+        calls.push(["delete", input]);
+      },
+    }),
+  });
+
+  try {
+    const listResponse = await app.inject({
+      method: "GET",
+      url: "/v1/admin/workspaces/workspace-1/module-roles/module-lab",
+      headers: {
+        authorization: "Bearer valid-token",
+      },
+    });
+    const updateResponse = await app.inject({
+      method: "PATCH",
+      url: "/v1/admin/workspaces/workspace-1/module-roles/module-lab/member-2",
+      headers: {
+        authorization: "Bearer valid-token",
+      },
+      payload: {
+        role: "operator",
+      },
+    });
+    const deleteResponse = await app.inject({
+      method: "DELETE",
+      url: "/v1/admin/workspaces/workspace-1/module-roles/module-lab/member-2",
+      headers: {
+        authorization: "Bearer valid-token",
+      },
     });
 
-    try {
-      const listResponse = await app.inject({
-        method: "GET",
-        url: "/v1/admin/workspaces/workspace-1/module-roles/module-lab",
-        headers: {
-          authorization: "Bearer valid-token",
+    assert.equal(listResponse.statusCode, 200);
+    assert.equal(updateResponse.statusCode, 200);
+    assert.equal(deleteResponse.statusCode, 200);
+    assert.deepEqual(calls, [
+      [
+        "list",
+        {
+          workspaceId: "workspace-1",
+          moduleId: "module-lab",
         },
-      });
-      const updateResponse = await app.inject({
-        method: "PATCH",
-        url: "/v1/admin/workspaces/workspace-1/module-roles/module-lab/member-2",
-        headers: {
-          authorization: "Bearer valid-token",
-        },
-        payload: {
+      ],
+      [
+        "update",
+        {
+          workspaceId: "workspace-1",
+          targetUserId: "member-2",
+          moduleId: "module-lab",
           role: "operator",
         },
-      });
-      const deleteResponse = await app.inject({
-        method: "DELETE",
-        url: "/v1/admin/workspaces/workspace-1/module-roles/module-lab/member-2",
-        headers: {
-          authorization: "Bearer valid-token",
+      ],
+      [
+        "delete",
+        {
+          workspaceId: "workspace-1",
+          targetUserId: "member-2",
+          moduleId: "module-lab",
         },
-      });
-
-      assert.equal(listResponse.statusCode, 200);
-      assert.equal(updateResponse.statusCode, 200);
-      assert.equal(deleteResponse.statusCode, 200);
-      assert.deepEqual(calls, [
-        [
-          "list",
-          {
-            workspaceId: "workspace-1",
-            moduleId: "module-lab",
-          },
-        ],
-        [
-          "update",
-          {
-            workspaceId: "workspace-1",
-            targetUserId: "member-2",
-            moduleId: "module-lab",
-            role: "operator",
-          },
-        ],
-        [
-          "delete",
-          {
-            workspaceId: "workspace-1",
-            targetUserId: "member-2",
-            moduleId: "module-lab",
-          },
-        ],
-      ]);
-      assert.equal(listResponse.json().moduleRoles[0].role, "viewer");
-      assert.equal(updateResponse.json().moduleRole.role, "operator");
-      assert.deepEqual(deleteResponse.json(), { ok: true });
-    } finally {
-      await app.close();
-    }
-  });
+      ],
+    ]);
+    assert.equal(listResponse.json().moduleRoles[0].role, "viewer");
+    assert.equal(updateResponse.json().moduleRole.role, "operator");
+    assert.deepEqual(deleteResponse.json(), { ok: true });
+  } finally {
+    await app.close();
+  }
 });
