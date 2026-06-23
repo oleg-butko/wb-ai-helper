@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 
 import { createClient } from "@supabase/supabase-js";
 
@@ -126,6 +126,10 @@ function hashExtensionApiKey(apiKey) {
   return createHash("sha256").update(apiKey, "utf8").digest("hex");
 }
 
+function createRawExtensionApiKey() {
+  return `wbai_${randomBytes(32).toString("base64url")}`;
+}
+
 function getExtensionUserEmail(userId) {
   return `${userId}@extension.com`;
 }
@@ -140,6 +144,7 @@ function mapExtensionApiKeyRecord(item) {
     quotaUsed,
     quotaRemaining: Math.max(quotaTotal - quotaUsed, 0),
     invalidatedAt: item.invalidated_at ?? null,
+    invalidationReason: item.invalidation_reason ?? null,
     createdAt: item.created_at ?? null,
     updatedAt: item.updated_at ?? null,
   };
@@ -164,6 +169,48 @@ function mapExtensionGenerationRequestRecord(item) {
     status: item.status,
     quotaConsumed: Boolean(item.quota_consumed),
     createdAt: item.created_at ?? null,
+  };
+}
+
+function mapExtensionQuotaEventRecord(item) {
+  return {
+    id: item.id,
+    apiKeyId: item.api_key_id,
+    eventType: item.event_type,
+    amount: item.amount,
+    requestId: item.request_id ?? null,
+    reason: item.reason ?? null,
+    createdByAdminUserId: item.created_by_admin_user_id ?? null,
+    createdAt: item.created_at,
+  };
+}
+
+function mapExtensionApiKeyUserRecord(item) {
+  return {
+    extensionUserId: item.extension_user_id,
+    firstSeenAt: item.first_seen_at,
+    lastSeenAt: item.last_seen_at ?? null,
+  };
+}
+
+function mapExtensionGenerationRequestSummaryRecord(item) {
+  return {
+    id: item.id,
+    extensionUserId: item.extension_user_id,
+    status: item.status,
+    quotaConsumed: Boolean(item.quota_consumed),
+    createdAt: item.created_at,
+  };
+}
+
+function mapExtensionErrorSummaryRecord(item) {
+  return {
+    id: item.id,
+    requestId: item.request_id ?? null,
+    extensionUserId: item.extension_user_id ?? null,
+    errorCode: item.error_code,
+    errorMessage: item.error_message,
+    createdAt: item.created_at,
   };
 }
 
@@ -1032,7 +1079,7 @@ export function createApiServices(config = getApiConfig(), overrides = {}) {
       const keyHash = hashExtensionApiKey(apiKey);
       const { data, error } = await adminClient
         .from("extension_api_keys")
-        .select("id, label, quota_total, quota_used, invalidated_at, created_at, updated_at")
+        .select("id, label, quota_total, quota_used, invalidated_at, invalidation_reason, created_at, updated_at")
         .eq("key_hash", keyHash)
         .maybeSingle();
 
@@ -1041,6 +1088,215 @@ export function createApiServices(config = getApiConfig(), overrides = {}) {
       }
 
       return data ? mapExtensionApiKeyRecord(data) : null;
+    },
+    async listAdminExtensionApiKeys({ limit = 50 } = {}) {
+      const normalizedLimit = Number.isInteger(limit)
+        ? Math.min(Math.max(limit, 1), 100)
+        : 50;
+      const { data, error } = await adminClient
+        .from("extension_api_keys")
+        .select("id, label, quota_total, quota_used, invalidated_at, invalidation_reason, created_at, updated_at")
+        .order("created_at", { ascending: false })
+        .range(0, normalizedLimit - 1);
+
+      if (error) {
+        throw error;
+      }
+
+      return (data ?? []).map(mapExtensionApiKeyRecord);
+    },
+    async createAdminExtensionApiKey({
+      label = null,
+      quota = 0,
+      reason = null,
+      adminUserId,
+    }) {
+      const rawApiKey = createRawExtensionApiKey();
+      const keyHash = hashExtensionApiKey(rawApiKey);
+      const normalizedQuota = Number.isInteger(quota) ? Math.max(quota, 0) : 0;
+
+      const { data, error } = await adminClient
+        .from("extension_api_keys")
+        .insert({
+          key_hash: keyHash,
+          label: typeof label === "string" && label.trim() ? label.trim() : null,
+          quota_total: normalizedQuota,
+          quota_used: 0,
+          created_by_admin_user_id: adminUserId,
+        })
+        .select("id, label, quota_total, quota_used, invalidated_at, invalidation_reason, created_at, updated_at")
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      if (normalizedQuota > 0) {
+        const quotaEventResponse = await adminClient
+          .from("extension_api_key_quota_events")
+          .insert({
+            api_key_id: data.id,
+            event_type: "grant",
+            amount: normalizedQuota,
+            reason: reason || "initial quota",
+            created_by_admin_user_id: adminUserId,
+          });
+
+        if (quotaEventResponse.error) {
+          throw quotaEventResponse.error;
+        }
+      }
+
+      return {
+        apiKey: mapExtensionApiKeyRecord(data),
+        rawApiKey,
+      };
+    },
+    async getAdminExtensionApiKeyDetail({ apiKeyId }) {
+      const { data, error } = await adminClient
+        .from("extension_api_keys")
+        .select("id, label, quota_total, quota_used, invalidated_at, invalidation_reason, created_at, updated_at")
+        .eq("id", apiKeyId)
+        .maybeSingle();
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data) {
+        return null;
+      }
+
+      const [
+        quotaEventsResponse,
+        usersResponse,
+        requestsResponse,
+        errorsResponse,
+      ] = await Promise.all([
+        adminClient
+          .from("extension_api_key_quota_events")
+          .select("id, api_key_id, event_type, amount, request_id, reason, created_by_admin_user_id, created_at")
+          .eq("api_key_id", apiKeyId)
+          .order("created_at", { ascending: false })
+          .limit(100),
+        adminClient
+          .from("extension_api_key_users")
+          .select("extension_user_id, first_seen_at, last_seen_at")
+          .eq("api_key_id", apiKeyId)
+          .order("last_seen_at", { ascending: false })
+          .limit(100),
+        adminClient
+          .from("extension_generation_requests")
+          .select("id, extension_user_id, status, quota_consumed, created_at")
+          .eq("api_key_id", apiKeyId)
+          .order("created_at", { ascending: false })
+          .limit(100),
+        adminClient
+          .from("extension_errors")
+          .select("id, request_id, extension_user_id, error_code, error_message, created_at")
+          .eq("api_key_id", apiKeyId)
+          .order("created_at", { ascending: false })
+          .limit(100),
+      ]);
+
+      for (const response of [
+        quotaEventsResponse,
+        usersResponse,
+        requestsResponse,
+        errorsResponse,
+      ]) {
+        if (response.error) {
+          throw response.error;
+        }
+      }
+
+      return {
+        apiKey: mapExtensionApiKeyRecord(data),
+        quotaEvents: (quotaEventsResponse.data ?? []).map(mapExtensionQuotaEventRecord),
+        users: (usersResponse.data ?? []).map(mapExtensionApiKeyUserRecord),
+        requests: (requestsResponse.data ?? []).map(mapExtensionGenerationRequestSummaryRecord),
+        errors: (errorsResponse.data ?? []).map(mapExtensionErrorSummaryRecord),
+      };
+    },
+    async adjustAdminExtensionApiKeyQuota({
+      apiKeyId,
+      direction,
+      amount,
+      reason = null,
+      adminUserId,
+    }) {
+      const signedAmount = direction === "remove" ? -amount : amount;
+      const { data, error } = await adminClient.rpc("adjust_extension_api_key_quota", {
+        p_api_key_id: apiKeyId,
+        p_delta: signedAmount,
+        p_reason: reason ?? null,
+        p_admin_user_id: adminUserId,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      const record = Array.isArray(data) ? data[0] : data;
+
+      if (!record) {
+        const missingError = new Error("The requested extension API key was not found.");
+        missingError.code = "admin_extension_api_key_not_found";
+        throw missingError;
+      }
+
+      return mapExtensionApiKeyRecord({
+        id: record.api_key_id,
+        label: record.label ?? null,
+        quota_total: record.quota_total,
+        quota_used: record.quota_used,
+        invalidated_at: record.invalidated_at ?? null,
+        invalidation_reason: record.invalidation_reason ?? null,
+        created_at: record.created_at ?? null,
+        updated_at: record.updated_at ?? null,
+      });
+    },
+    async invalidateAdminExtensionApiKey({
+      apiKeyId,
+      reason = null,
+      adminUserId,
+    }) {
+      const { data, error } = await adminClient
+        .from("extension_api_keys")
+        .update({
+          invalidated_at: new Date().toISOString(),
+          invalidated_by_admin_user_id: adminUserId,
+          invalidation_reason: reason || null,
+        })
+        .eq("id", apiKeyId)
+        .select("id, label, quota_total, quota_used, invalidated_at, invalidation_reason, created_at, updated_at")
+        .maybeSingle();
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data) {
+        const missingError = new Error("The requested extension API key was not found.");
+        missingError.code = "admin_extension_api_key_not_found";
+        throw missingError;
+      }
+
+      const quotaEventResponse = await adminClient
+        .from("extension_api_key_quota_events")
+        .insert({
+          api_key_id: apiKeyId,
+          event_type: "invalidate",
+          amount: 0,
+          reason: reason || null,
+          created_by_admin_user_id: adminUserId,
+        });
+
+      if (quotaEventResponse.error) {
+        throw quotaEventResponse.error;
+      }
+
+      return mapExtensionApiKeyRecord(data);
     },
     async createExtensionGenerationRequest({
       apiKeyId,
@@ -1238,56 +1494,7 @@ export function createApiServices(config = getApiConfig(), overrides = {}) {
         return null;
       }
 
-      const [
-        quotaEventsResponse,
-        usersResponse,
-        requestsResponse,
-        errorsResponse,
-      ] = await Promise.all([
-        adminClient
-          .from("extension_api_key_quota_events")
-          .select("id, event_type, amount, reason, created_at, created_by_admin_user_id")
-          .eq("api_key_id", apiKeyRecord.id)
-          .order("created_at", { ascending: false })
-          .limit(100),
-        adminClient
-          .from("extension_api_key_users")
-          .select("extension_user_id, first_seen_at, last_seen_at")
-          .eq("api_key_id", apiKeyRecord.id)
-          .order("last_seen_at", { ascending: false })
-          .limit(100),
-        adminClient
-          .from("extension_generation_requests")
-          .select("id, extension_user_id, status, quota_consumed, created_at")
-          .eq("api_key_id", apiKeyRecord.id)
-          .order("created_at", { ascending: false })
-          .limit(100),
-        adminClient
-          .from("extension_errors")
-          .select("id, request_id, extension_user_id, error_code, error_message, created_at")
-          .eq("api_key_id", apiKeyRecord.id)
-          .order("created_at", { ascending: false })
-          .limit(100),
-      ]);
-
-      for (const response of [
-        quotaEventsResponse,
-        usersResponse,
-        requestsResponse,
-        errorsResponse,
-      ]) {
-        if (response.error) {
-          throw response.error;
-        }
-      }
-
-      return {
-        apiKey: apiKeyRecord,
-        quotaEvents: quotaEventsResponse.data ?? [],
-        users: usersResponse.data ?? [],
-        requests: requestsResponse.data ?? [],
-        errors: errorsResponse.data ?? [],
-      };
+      return await this.getAdminExtensionApiKeyDetail({ apiKeyId: apiKeyRecord.id });
     },
     async listWorkspaceFiles({ workspaceId }) {
       const { data, error } = await adminClient

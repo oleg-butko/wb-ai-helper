@@ -244,4 +244,77 @@ begin
 end;
 $$;
 
+create or replace function public.adjust_extension_api_key_quota(
+  p_api_key_id uuid,
+  p_delta integer,
+  p_reason text,
+  p_admin_user_id uuid
+)
+returns table (
+  api_key_id uuid,
+  label text,
+  quota_total integer,
+  quota_used integer,
+  invalidated_at timestamptz,
+  invalidation_reason text,
+  created_at timestamptz,
+  updated_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if p_delta = 0 then
+    raise exception 'Quota adjustment amount must be non-zero.'
+      using errcode = '22023';
+  end if;
+
+  return query
+  with updated_key as (
+    update public.extension_api_keys
+    set quota_total = quota_total + p_delta
+    where id = p_api_key_id
+      and quota_total + p_delta >= quota_used
+      and quota_total + p_delta >= 0
+    returning
+      id,
+      extension_api_keys.label,
+      extension_api_keys.quota_total,
+      extension_api_keys.quota_used,
+      extension_api_keys.invalidated_at,
+      extension_api_keys.invalidation_reason,
+      extension_api_keys.created_at,
+      extension_api_keys.updated_at
+  ),
+  inserted_event as (
+    insert into public.extension_api_key_quota_events (
+      api_key_id,
+      event_type,
+      amount,
+      reason,
+      created_by_admin_user_id
+    )
+    select
+      updated_key.id,
+      case when p_delta > 0 then 'grant' else 'remove' end,
+      p_delta,
+      p_reason,
+      p_admin_user_id
+    from updated_key
+    returning 1
+  )
+  select
+    updated_key.id,
+    updated_key.label,
+    updated_key.quota_total,
+    updated_key.quota_used,
+    updated_key.invalidated_at,
+    updated_key.invalidation_reason,
+    updated_key.created_at,
+    updated_key.updated_at
+  from updated_key;
+end;
+$$;
+
 commit;

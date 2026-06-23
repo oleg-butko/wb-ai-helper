@@ -5,6 +5,7 @@
 - Added Supabase schema, Fastify route, service methods, and route coverage for extension API-key review-response calls with global quota and audit logs.
 - Added stub review-response output with backend diagnostics until the OpenAI-compatible provider is added.
 - Switched app-admin checks toward the Supabase `admins` table and blocked extension auth users from the web frontend.
+- Added admin API-key management routes, Next proxy routes, and a minimal admin page for creating, finding, adjusting quota, and invalidating extension API keys.
 
 ## Shared Next proxy test setup
 

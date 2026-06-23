@@ -1,0 +1,110 @@
+# Extension API and API-key Administration Plan
+
+**Goal:** Add a Fastify API that the Chrome extension can call with `x-api-key` and an extension-generated UUIDv7 `user_id`, then add admin tooling for API-key lifecycle, quota auditing, invalidation, lookup by raw key value, generation logs, and error reports.
+
+**Current status:** In progress.
+
+## Completed
+
+- Committed `c9e9b77 feat(backend): add extension review response API foundation`.
+- Added Fastify route `POST /v1/extension/review-response`.
+- Added shared Zod contract in `src/shared/api/extension.*`.
+- Added `x-api-key` resolver with informative failures for:
+  - missing API key;
+  - invalid API key;
+  - invalidated API key;
+  - exhausted quota.
+- Added Supabase service methods for:
+  - API-key hash lookup;
+  - generation request create/update;
+  - generation step events;
+  - error collection;
+  - extension auth-user provisioning;
+  - API-key/user usage association;
+  - atomic quota consumption through RPC;
+  - admin lookup of a pasted raw API key by hashing it server-side.
+- Added Supabase SQL file `docs/SQL/extension-api.sql` with:
+  - `admins`;
+  - `extension_api_keys`;
+  - `extension_api_key_quota_events`;
+  - `extension_users`;
+  - `extension_api_key_users`;
+  - `extension_generation_requests`;
+  - `extension_generation_events`;
+  - `extension_errors`;
+  - `consume_extension_api_key_quota(...)`.
+- Added stub review-response output with backend diagnostics until the OpenAI-compatible provider is configured.
+- Ensured no extension Supabase user is created when the API key is invalid, invalidated, or out of quota.
+- Ensured quota is checked before generation and consumed only after successful generation.
+- Switched app-admin checks toward Supabase `public.admins`.
+- Blocked Supabase users marked with `app_metadata.account_type = "extension"` from the Next.js frontend.
+- Updated admin docs and changelogs.
+- Added route coverage and included the extension route suite in `test:api:routes`.
+- Added admin API-key Fastify routes for list/create/find/detail/quota adjustment/invalidation.
+- Added shared admin API-key contracts.
+- Added Next proxy routes under `/api/admin/extension-api-keys...`.
+- Added minimal admin page at `/[locale]/admin/api-keys` for key creation, raw-key lookup, quota updates, invalidation, quota history, and recent errors.
+- Added admin API-key route coverage and included it in `test:api:routes`.
+
+## Verified
+
+- `npm run test:api:routes`
+- `node scripts/run-test-suite.mjs api:routes:admin-extension-api-keys`
+- `node scripts/run-test-suite.mjs api:routes:extension`
+- `npm run test:api:admin-workspace-routes`
+- `npm run test:api:next-proxy:admin-workspaces`
+- `npm run test:api:app-admin-access`
+- `npm run typecheck`
+- `npm run build`
+- `git diff --check`
+
+## Product decisions already confirmed
+
+- One API key can be shared by many extension `user_id`s.
+- Quota is global per API key.
+- Quota decrements only after successful AI generation.
+- Failed calls do not consume quota.
+- Generation steps and errors must be stored for admin reporting.
+- Extension auth uses `x-api-key`.
+- AI provider/model will be OpenAI API compatible and added later.
+- Responses should be stored in Supabase.
+- Admins are normal Supabase Auth users whose lowercased email is manually inserted into `public.admins`.
+- Admins must be able to paste a raw API key and retrieve its info/history.
+- Extension-created users use `<uuid>@extension.com`, password equal to API key, and are blocked from the Next frontend by app logic.
+
+## Remaining work
+
+### 1. Tests
+
+Add/extend tests for:
+
+- Next proxy response validation;
+- frontend source/admin visibility if a UI page is added.
+
+Completed route coverage already verifies:
+
+- admin key route auth denial;
+- admin table authorization;
+- create key returns raw key once;
+- find-by-value calls the server-side lookup;
+- quota grant/removal route wiring;
+- invalidation route wiring.
+
+### 2. Manual UI hardening
+
+The first admin page is intentionally minimal. Follow-up UI improvements:
+
+- add route to main app navigation only for admins;
+- add pagination/filtering;
+- show generation request rows and extension-user usage rows in the selected-key detail;
+- add confirmation before invalidation;
+- improve Russian/English dictionaries instead of hardcoded admin labels.
+
+### 3. Follow-up integration
+
+When the exact review JSON and AI provider config are provided:
+
+- replace the stub generator with provider call;
+- keep generation events around provider start/success/failure;
+- store model/provider/request/response metadata;
+- consume quota only after provider success.

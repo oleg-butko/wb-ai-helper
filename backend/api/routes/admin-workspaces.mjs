@@ -2,7 +2,7 @@ import {
   updateWorkspaceMemberRoleRequestSchema,
   updateWorkspaceModuleRoleRequestSchema,
 } from "../../src/shared/api/workspaces.mjs";
-import { resolveAuthenticatedRequest } from "../lib/auth.mjs";
+import { resolveAppAdminRequest } from "../lib/admin-auth.mjs";
 
 function mapAdminWorkspaceError(error, reply, fallback) {
   if (error?.code === "workspace_member_not_found") {
@@ -35,26 +35,6 @@ function mapAdminWorkspaceError(error, reply, fallback) {
   }
 
   return null;
-}
-
-async function resolveAppAdminRequest(request, reply) {
-  const authentication = await resolveAuthenticatedRequest(request, reply);
-
-  if (!authentication.ok) {
-    return authentication;
-  }
-
-  if (!(await request.server.services.isAppAdminEmail(authentication.user.email))) {
-    return {
-      ok: false,
-      response: reply.code(403).send({
-        error: "app_admin_required",
-        message: "The current user is not allowed to use app-admin tools.",
-      }),
-    };
-  }
-
-  return authentication;
 }
 
 export async function registerAdminWorkspaceRoutes(app) {
