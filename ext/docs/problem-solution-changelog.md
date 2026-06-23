@@ -1,5 +1,11 @@
 # Problem-solution changelog
 
+## Add build-specific extension config defaults
+
+Problem: The extension had no background service worker and no persisted install-time config, so there was no reliable way to initialize or manually reset API settings per build type.
+
+Solution: Added an MV3 service worker, `chrome.storage.sync` config reset helper, explicit production/develop build scripts, build-mode-specific defaults, UUIDv7 `user_id` generation, and a manual `self.resetConfig()` service-worker console hook.
+
 ## Parse feedback rating without generated class hashes
 
 Problem: The feedback drawer renders its five rating stars with generated class suffixes, so matching the complete class names would break when the site rebuilds its styles.

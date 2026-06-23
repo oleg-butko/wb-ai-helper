@@ -2,16 +2,16 @@ import path from 'node:path'
 import { crx } from '@crxjs/vite-plugin'
 import react from '@vitejs/plugin-react' // https://www.npmjs.com/package/@vitejs/plugin-react
 import { defineConfig } from 'vite'
-import manifest from './manifest.config.js'
+import { createManifest } from './manifest.config.js'
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       '@': `${path.resolve(__dirname, 'src')}`,
     },
   },
   plugins: [
-    crx({ manifest }),
+    crx({ manifest: createManifest(mode) }),
     react({ exclude: [/\/node_modules\//] }),
   ],
   server: {
@@ -27,4 +27,4 @@ export default defineConfig({
       ],
     },
   },
-})
+}))

@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false",
-    "build": "tsc -b && vite build",
+    "build": "npm run build:production",
+    "build:production": "tsc -b && vite build --mode production",
+    "build:develop": "tsc -b && vite build --mode develop",
     "preview": "vite preview"
   },
   "dependencies": {
