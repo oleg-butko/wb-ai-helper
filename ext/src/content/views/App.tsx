@@ -4,6 +4,11 @@ import './App.css'
 
 const helperButtonId = 'crxjs-helper-button'
 
+type HelperButtonWarning = {
+	title: string
+	message: string
+}
+
 type ParsedInfo = {
 	name: string
 	product_details: string[]
@@ -222,6 +227,23 @@ function removeHelperButton() {
 	document.getElementById(helperButtonId)?.remove()
 }
 
+function findGenerateButton(buttonsRoot: HTMLElement) {
+	const previousSelectorButton =
+		document.querySelector<HTMLButtonElement>(buttonGenSelector)
+
+	if (previousSelectorButton && buttonsRoot.contains(previousSelectorButton)) {
+		return previousSelectorButton
+	}
+
+	const generationButtonsRoot =
+		findElementByClassPrefix(buttonsRoot, 'Generation-buttons-block__') ??
+		buttonsRoot
+
+	return Array.from(
+		generationButtonsRoot.querySelectorAll<HTMLButtonElement>('button')
+	).find((button) => getText(button) === 'Сгенерировать')
+}
+
 function createHelperButton(
 	buttonGenWrapper: Element,
 	onHelperClick: () => void
@@ -259,16 +281,64 @@ function createHelperButton(
 	return wrapper
 }
 
-function syncHelperButton(portal: HTMLElement, onHelperClick: () => void) {
-	const buttonsRoot = document.querySelector<HTMLElement>(buttonsRootSelector)
-	const buttonGen = portal.querySelector<HTMLButtonElement>(buttonGenSelector)
+function createFallbackHelperButton(onHelperClick: () => void) {
+	const wrapper = document.createElement('div')
+	wrapper.id = helperButtonId
+	wrapper.className = 'helper-fallback-button-wrapper'
 
-	if (!buttonsRoot || !buttonGen) {
+	const button = document.createElement('button')
+	button.type = 'button'
+	button.className = 'helper-fallback-button'
+	button.textContent = 'AI ответ'
+	button.addEventListener('click', (event) => {
+		event.preventDefault()
+		event.stopPropagation()
+		onHelperClick()
+	})
+
+	wrapper.append(button)
+
+	return wrapper
+}
+
+function isDrawerOpened(portal: HTMLElement) {
+	return portal.textContent?.trim() !== ''
+}
+
+function syncHelperButton(
+	portal: HTMLElement,
+	onHelperClick: () => void,
+	onWarning: (warning: HelperButtonWarning) => void
+) {
+	const buttonsRoot = document.querySelector<HTMLElement>(buttonsRootSelector)
+
+	if (!buttonsRoot) {
 		removeHelperButton()
+		if (!isDrawerOpened(portal)) {
+			return
+		}
+
+		onWarning({
+			title: 'AI ответ не добавлен',
+			message:
+				'Расширение не нашло блок кнопок в открытом отзыве. Вероятно, Wildberries изменил HTML страницы, и расширение нужно обновить.'
+		})
 		return
 	}
 
 	if (document.getElementById(helperButtonId)) {
+		return
+	}
+
+	const buttonGen = findGenerateButton(buttonsRoot)
+
+	if (!buttonGen) {
+		buttonsRoot.append(createFallbackHelperButton(onHelperClick))
+		onWarning({
+			title: 'AI ответ добавлен в резервном режиме',
+			message:
+				'Расширение не нашло встроенную кнопку «Сгенерировать» по ожидаемой структуре страницы. Кнопка «AI ответ» добавлена с простым стилем, но расширение нужно обновить под новый HTML Wildberries.'
+		})
 		return
 	}
 
@@ -277,6 +347,12 @@ function syncHelperButton(portal: HTMLElement, onHelperClick: () => void) {
 	)
 
 	if (!buttonGenWrapper) {
+		buttonsRoot.append(createFallbackHelperButton(onHelperClick))
+		onWarning({
+			title: 'AI ответ добавлен в резервном режиме',
+			message:
+				'Расширение нашло кнопку «Сгенерировать», но не смогло определить ее контейнер. Кнопка «AI ответ» добавлена с простым стилем, но расширение нужно обновить под новый HTML Wildberries.'
+		})
 		return
 	}
 
@@ -285,6 +361,8 @@ function syncHelperButton(portal: HTMLElement, onHelperClick: () => void) {
 
 function App() {
 	const [parsedInfo, setParsedInfo] = useState<ParsedInfo | null>(null)
+	const [helperButtonWarning, setHelperButtonWarning] =
+		useState<HelperButtonWarning | null>(null)
 
 	useEffect(() => {
 		const abortController = new AbortController()
@@ -308,10 +386,14 @@ function App() {
 					setParsedInfo(parseFeedbackInfo(portal))
 				}
 
+				const handleWarning = (warning: HelperButtonWarning) => {
+					setHelperButtonWarning((currentWarning) => currentWarning ?? warning)
+				}
+
 				// Now you can observe inside this portal if drawer content appears later.
 				const observer = new MutationObserver(() => {
 					console.log('[CRXJS] Portal content changed')
-					syncHelperButton(portal, handleHelperClick)
+					syncHelperButton(portal, handleHelperClick, handleWarning)
 				})
 
 				observer.observe(portal, {
@@ -319,7 +401,7 @@ function App() {
 					subtree: true
 				})
 
-				syncHelperButton(portal, handleHelperClick)
+				syncHelperButton(portal, handleHelperClick, handleWarning)
 
 				abortController.signal.addEventListener('abort', () => {
 					observer.disconnect()
@@ -400,6 +482,26 @@ function App() {
 								<dd>{parsedInfo.size}</dd>
 							</div>
 						</dl>
+					</div>
+				</div>
+			)}
+
+			{helperButtonWarning && (
+				<div className='helper-modal-backdrop'>
+					<div className='helper-modal' role='alertdialog' aria-modal='true'>
+						<div className='helper-modal-header'>
+							<h2>{helperButtonWarning.title}</h2>
+							<button
+								type='button'
+								className='helper-modal-close'
+								onClick={() => setHelperButtonWarning(null)}>
+								Close
+							</button>
+						</div>
+
+						<div className='helper-modal-message'>
+							<p>{helperButtonWarning.message}</p>
+						</div>
 					</div>
 				</div>
 			)}

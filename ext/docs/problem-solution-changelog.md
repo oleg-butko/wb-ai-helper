@@ -1,5 +1,11 @@
 # Problem-solution changelog
 
+## Recover AI answer button when drawer button markup changes
+
+Problem: Wildberries changed the drawer action-button structure, so the old positional selector for the built-in `Сгенерировать` button returned `null` and the extension stopped adding `AI ответ`.
+
+Solution: Find the built-in generation button by stable text/structure inside the known button root, keep the old selector only as a compatibility fallback, add a simple fallback `AI ответ` button when the native button wrapper cannot be cloned, and show a warning modal that the extension needs an update for the changed page HTML.
+
 ## Add build-specific extension config defaults
 
 Problem: The extension had no background service worker and no persisted install-time config, so there was no reliable way to initialize or manually reset API settings per build type.
