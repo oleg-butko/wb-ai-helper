@@ -49,9 +49,11 @@ export const testSuites = {
       "api:sql-user-module-roles-retirement",
       "api:storage",
       "api:env:dev",
-      "api:integration:account",
-      "api:integration:workspace",
     ],
+  },
+  "api:integration:all": {
+    label: "test:api:integration:all",
+    children: ["api:integration:account", "api:integration:workspace"],
   },
   "api:routes": {
     label: "test:api:routes",

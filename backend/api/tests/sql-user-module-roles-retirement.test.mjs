@@ -25,8 +25,8 @@ await runCase("runtime paths do not query legacy user_module_roles", async () =>
   }
 });
 
-await runCase("legacy user module roles have an explicit retirement SQL", async () => {
-  const sql = await readFile(new URL("../../docs/SQL/retire-user-module-roles.sql", import.meta.url), "utf8");
+await runCase("full reset removes legacy user_module_roles", async () => {
+  const sql = await readFile(new URL("../../docs/SQL/reset-supabase-full.sql", import.meta.url), "utf8");
 
   assert.match(sql, /drop table if exists public\.user_module_roles cascade;/i);
   assert.match(sql, /drop function if exists public\.handle_user_module_roles_updated_at\(\) cascade;/i);
