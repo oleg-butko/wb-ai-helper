@@ -12,6 +12,12 @@ Problem: admins need to generate API keys, find keys by pasted raw value, change
 
 Solution: added admin-table-guarded Fastify API-key routes, shared admin contracts, Supabase service methods, Next proxy routes, and a minimal `/[locale]/admin/api-keys` page. Raw API keys are returned only on creation; later lookup hashes the pasted value server-side.
 
+## Supabase reset/bootstrap coverage
+
+Problem: the standalone extension API SQL existed, but the full reset/bootstrap scripts used from Supabase Studio did not yet include the new extension/admin API-key schema.
+
+Solution: updated `reset-supabase-full.sql` to drop the extension tables/functions and embedded the extension/admin API-key schema plus quota RPCs into `bootstrap-supabase-initial.sql`.
+
 ## Database-backed admins
 
 Problem: the backend had app-admin gating through `APP_ADMIN_EMAILS`, but admin users now need to be managed manually in Supabase Studio through a table.

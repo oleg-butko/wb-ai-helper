@@ -43,6 +43,7 @@ export const testSuites = {
       "api:admin-workspace-service",
       "api:admin-workspace-routes",
       "api:next-proxy:admin-workspaces",
+      "api:next-proxy:admin-extension-api-keys",
       "api:sign-out-redirect",
       "api:auth-callback-redirect",
       "api:sql-user-module-roles-retirement",
@@ -152,6 +153,13 @@ export const testSuites = {
   "api:next-proxy:admin-workspaces": {
     label: "test:api:next-proxy:admin-workspaces",
     ...nodeScript("scripts/run-node-with-warning-filter.mjs", "api/tests/next-admin-workspace-routes.test.mjs"),
+  },
+  "api:next-proxy:admin-extension-api-keys": {
+    label: "test:api:next-proxy:admin-extension-api-keys",
+    ...nodeScript(
+      "scripts/run-node-with-warning-filter.mjs",
+      "api/tests/next-admin-extension-api-key-routes.test.mjs",
+    ),
   },
   "api:sign-out-redirect": {
     label: "test:api:sign-out-redirect",

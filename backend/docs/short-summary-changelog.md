@@ -6,6 +6,7 @@
 - Added stub review-response output with backend diagnostics until the OpenAI-compatible provider is added.
 - Switched app-admin checks toward the Supabase `admins` table and blocked extension auth users from the web frontend.
 - Added admin API-key management routes, Next proxy routes, and a minimal admin page for creating, finding, adjusting quota, and invalidating extension API keys.
+- Updated Supabase reset/bootstrap SQL scripts so Studio-based schema setup includes extension/admin API-key tables and RPCs.
 
 ## Shared Next proxy test setup
 

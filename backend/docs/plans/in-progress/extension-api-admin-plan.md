@@ -45,12 +45,18 @@
 - Added Next proxy routes under `/api/admin/extension-api-keys...`.
 - Added minimal admin page at `/[locale]/admin/api-keys` for key creation, raw-key lookup, quota updates, invalidation, quota history, and recent errors.
 - Added admin API-key route coverage and included it in `test:api:routes`.
+- Updated `docs/SQL/reset-supabase-full.sql` and `docs/SQL/bootstrap-supabase-initial.sql` so Supabase Studio reset/bootstrap includes the extension/admin API-key schema.
+- Added Next proxy response validation tests for `/api/admin/extension-api-keys...`.
+- Added source-level guard coverage that the admin API-key page requires database-backed admin access.
+- Added direct package scripts for the new extension/admin API-key test suites.
 
 ## Verified
 
 - `npm run test:api:routes`
 - `node scripts/run-test-suite.mjs api:routes:admin-extension-api-keys`
 - `node scripts/run-test-suite.mjs api:routes:extension`
+- `node scripts/run-test-suite.mjs api:next-proxy:admin-extension-api-keys`
+- `npm run test:api:frontend-workspace-rbac`
 - `npm run test:api:admin-workspace-routes`
 - `npm run test:api:next-proxy:admin-workspaces`
 - `npm run test:api:app-admin-access`
@@ -76,12 +82,7 @@
 
 ### 1. Tests
 
-Add/extend tests for:
-
-- Next proxy response validation;
-- frontend source/admin visibility if a UI page is added.
-
-Completed route coverage already verifies:
+Completed coverage verifies:
 
 - admin key route auth denial;
 - admin table authorization;
@@ -89,6 +90,10 @@ Completed route coverage already verifies:
 - find-by-value calls the server-side lookup;
 - quota grant/removal route wiring;
 - invalidation route wiring.
+- Next proxy response validation;
+- frontend source/admin visibility for the API-key admin page.
+
+No required test tasks remain for the current slice.
 
 ### 2. Manual UI hardening
 

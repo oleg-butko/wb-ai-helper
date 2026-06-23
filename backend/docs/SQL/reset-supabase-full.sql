@@ -17,6 +17,14 @@ begin;
 drop trigger if exists on_auth_user_created on auth.users;
 
 -- Drop project tables. CASCADE removes indexes and dependent constraints.
+drop table if exists public.extension_errors cascade;
+drop table if exists public.extension_generation_events cascade;
+drop table if exists public.extension_generation_requests cascade;
+drop table if exists public.extension_api_key_users cascade;
+drop table if exists public.extension_users cascade;
+drop table if exists public.extension_api_key_quota_events cascade;
+drop table if exists public.extension_api_keys cascade;
+drop table if exists public.admins cascade;
 drop table if exists public.workspace_module_roles cascade;
 drop table if exists public.workspace_memberships cascade;
 drop table if exists public.workspaces cascade;
@@ -25,6 +33,10 @@ drop table if exists public.workspace_files cascade;
 drop table if exists public.profiles cascade;
 
 -- Drop project helper triggers/functions.
+drop function if exists public.adjust_extension_api_key_quota(uuid, integer, text, uuid) cascade;
+drop function if exists public.consume_extension_api_key_quota(uuid, integer, uuid, text) cascade;
+drop function if exists public.handle_extension_generation_requests_updated_at() cascade;
+drop function if exists public.handle_extension_api_keys_updated_at() cascade;
 drop function if exists public.handle_workspace_module_roles_updated_at() cascade;
 drop function if exists public.handle_workspace_memberships_updated_at() cascade;
 drop function if exists public.handle_workspaces_updated_at() cascade;
