@@ -1,7 +1,7 @@
 "use client";
 
-import { Alert, Badge, Button, Card, CopyButton, Group, NumberInput, Stack, Table, Text, TextInput, Textarea, Title } from "@mantine/core";
-import { useCallback, useEffect, useState } from "react";
+import { Alert, Badge, Button, Card, CopyButton, Group, NumberInput, Select, Stack, Table, Text, TextInput, Textarea, Title } from "@mantine/core";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type {
   AdminExtensionApiKeyDetailResponse,
@@ -39,9 +39,32 @@ export function AdminExtensionApiKeysCard() {
   const [quotaReason, setQuotaReason] = useState("");
   const [invalidationReason, setInvalidationReason] = useState("");
   const [invalidationConfirm, setInvalidationConfirm] = useState("");
+  const [listFilter, setListFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "invalidated">("all");
+  const [page, setPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const pageSize = 10;
+
+  const filteredApiKeys = useMemo(() => {
+    const normalizedFilter = listFilter.trim().toLowerCase();
+
+    return apiKeys.filter((apiKey) => {
+      const matchesStatus =
+        statusFilter === "all" ||
+        (statusFilter === "active" && !apiKey.invalidatedAt) ||
+        (statusFilter === "invalidated" && Boolean(apiKey.invalidatedAt));
+      const searchableText = `${apiKey.id} ${apiKey.label ?? ""}`.toLowerCase();
+      const matchesText = !normalizedFilter || searchableText.includes(normalizedFilter);
+
+      return matchesStatus && matchesText;
+    });
+  }, [apiKeys, listFilter, statusFilter]);
+
+  const pageCount = Math.max(Math.ceil(filteredApiKeys.length / pageSize), 1);
+  const currentPage = Math.min(page, pageCount);
+  const pagedApiKeys = filteredApiKeys.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const refreshList = useCallback(async () => {
     const response = await fetch("/api/admin/extension-api-keys?limit=50", {
@@ -54,6 +77,7 @@ export function AdminExtensionApiKeysCard() {
     }
 
     setApiKeys(payload.apiKeys ?? []);
+    setPage(1);
   }, []);
 
   useEffect(() => {
@@ -272,6 +296,29 @@ export function AdminExtensionApiKeysCard() {
             <Title order={3}>Recent API keys</Title>
             <Button variant="light" loading={loading} onClick={() => refreshList()}>Refresh</Button>
           </Group>
+          <Group grow align="end">
+            <TextInput
+              label="Filter by label or id"
+              value={listFilter}
+              onChange={(event) => {
+                setListFilter(event.currentTarget.value);
+                setPage(1);
+              }}
+            />
+            <Select
+              label="Status"
+              value={statusFilter}
+              onChange={(value) => {
+                setStatusFilter(value === "active" || value === "invalidated" ? value : "all");
+                setPage(1);
+              }}
+              data={[
+                { value: "all", label: "All" },
+                { value: "active", label: "Active" },
+                { value: "invalidated", label: "Invalidated" },
+              ]}
+            />
+          </Group>
           <Table.ScrollContainer minWidth={720}>
             <Table verticalSpacing="sm">
               <Table.Thead>
@@ -284,7 +331,7 @@ export function AdminExtensionApiKeysCard() {
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
-                {apiKeys.map((apiKey) => (
+                {pagedApiKeys.map((apiKey) => (
                   <Table.Tr key={apiKey.id}>
                     <Table.Td>{apiKey.label ?? apiKey.id}</Table.Td>
                     <Table.Td>
@@ -302,6 +349,33 @@ export function AdminExtensionApiKeysCard() {
               </Table.Tbody>
             </Table>
           </Table.ScrollContainer>
+          {filteredApiKeys.length === 0 ? <Text c="dimmed">No API keys match the current filters.</Text> : null}
+          <Group justify="space-between">
+            <Text size="sm" c="dimmed">
+              Showing {pagedApiKeys.length} of {filteredApiKeys.length} filtered keys ({apiKeys.length} loaded)
+            </Text>
+            <Group gap="xs">
+              <Button
+                size="xs"
+                variant="light"
+                disabled={currentPage <= 1}
+                onClick={() => setPage((value) => Math.max(value - 1, 1))}
+              >
+                Previous
+              </Button>
+              <Text size="sm">
+                Page {currentPage} / {pageCount}
+              </Text>
+              <Button
+                size="xs"
+                variant="light"
+                disabled={currentPage >= pageCount}
+                onClick={() => setPage((value) => Math.min(value + 1, pageCount))}
+              >
+                Next
+              </Button>
+            </Group>
+          </Group>
         </Stack>
       </Card>
 
