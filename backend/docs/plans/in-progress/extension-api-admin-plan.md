@@ -53,6 +53,17 @@
 - Added an admin-only app navigation item for `/[locale]/admin/api-keys`, guarded by the Supabase `admins` table check.
 - Added local filtering and pagination over the loaded admin API-key list.
 - Moved admin API-key page/card labels and messages into the English/Russian dictionaries.
+- Replaced the generic extension review request payload with the parsed-data schema shown by the extension modal:
+  - `name`;
+  - `product_details`;
+  - `feedback_reasons`;
+  - `rating`;
+  - `product_name`;
+  - `product_url`;
+  - `vendor_code_1`;
+  - `vendor_code_2`;
+  - `colors`;
+  - `size`.
 
 ## Verified
 
@@ -105,7 +116,7 @@ No required manual UI hardening tasks remain for the current slice.
 
 ### 3. Follow-up integration
 
-When the exact review JSON and AI provider config are provided:
+When the AI provider config is provided:
 
 - replace the stub generator with provider call;
 - keep generation events around provider start/success/failure;

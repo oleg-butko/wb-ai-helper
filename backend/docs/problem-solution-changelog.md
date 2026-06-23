@@ -18,6 +18,12 @@ Problem: the standalone extension API SQL existed, but the full reset/bootstrap 
 
 Solution: updated `reset-supabase-full.sql` to drop the extension tables/functions and embedded the extension/admin API-key schema plus quota RPCs into `bootstrap-supabase-initial.sql`.
 
+## Extension review request schema
+
+Problem: the extension review-response API accepted an arbitrary `review` object, but the extension already has a concrete modal payload shape for parsed drawer data.
+
+Solution: added a shared Zod schema matching the extension modal fields (`name`, `product_details`, `feedback_reasons`, `rating`, `product_name`, `product_url`, `vendor_code_1`, `vendor_code_2`, `colors`, `size`) and updated route coverage to reject payloads outside that shape.
+
 ## Database-backed admins
 
 Problem: the backend had app-admin gating through `APP_ADMIN_EMAILS`, but admin users now need to be managed manually in Supabase Studio through a table.

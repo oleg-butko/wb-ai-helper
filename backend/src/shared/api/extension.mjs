@@ -1,8 +1,21 @@
 import { z } from "zod";
 
+export const extensionParsedReviewSchema = z.object({
+  name: z.string(),
+  product_details: z.array(z.string()),
+  feedback_reasons: z.array(z.string()),
+  rating: z.number().int().min(0).max(5),
+  product_name: z.string(),
+  product_url: z.string(),
+  vendor_code_1: z.string(),
+  vendor_code_2: z.string(),
+  colors: z.string(),
+  size: z.string(),
+});
+
 export const extensionReviewRequestSchema = z.object({
   user_id: z.string().uuid(),
-  review: z.record(z.string(), z.unknown()),
+  review: extensionParsedReviewSchema,
 });
 
 export const extensionDiagnosticsSchema = z.object({

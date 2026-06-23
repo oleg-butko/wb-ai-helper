@@ -6,6 +6,18 @@ import { createServices, runCase } from "./helpers/route-test-helpers.mjs";
 const extensionUserId = "c2a5f455-c2a5-7338-9883-02f3edc500a7";
 const apiKeyId = "11111111-1111-4111-8111-111111111111";
 const requestId = "22222222-2222-4222-8222-222222222222";
+const parsedReview = {
+  name: "Наталья",
+  product_details: ["Покупка: 10.06.2026", "Плюсы: Ничего", "Минусы: плохое качество"],
+  feedback_reasons: ["Отказ", "Жалоба одобрена"],
+  rating: 1,
+  product_name: "Парные худи",
+  product_url: "https://www.wildberries.ru/catalog/637477223/detail.aspx",
+  vendor_code_1: "худи_коричневый",
+  vendor_code_2: "637477223",
+  colors: "Коричневый, коричневый мрамор, коричневый ротанг, коричневый меланж, светло-коричневый",
+  size: "M",
+};
 
 function createExtensionServices(overrides = {}) {
   return createServices({
@@ -66,7 +78,7 @@ await runCase("POST /v1/extension/review-response rejects missing API key", asyn
       url: "/v1/extension/review-response",
       payload: {
         user_id: extensionUserId,
-        review: {},
+        review: parsedReview,
       },
     });
 
@@ -145,7 +157,7 @@ await runCase("POST /v1/extension/review-response rejects exhausted quota before
       },
       payload: {
         user_id: extensionUserId,
-        review: {},
+        review: parsedReview,
       },
     });
 
@@ -209,10 +221,7 @@ await runCase("POST /v1/extension/review-response returns stub response and cons
       },
       payload: {
         user_id: extensionUserId,
-        review: {
-          rating: 1,
-          comment: "bad quality",
-        },
+        review: parsedReview,
       },
     });
 
@@ -245,6 +254,47 @@ await runCase("POST /v1/extension/review-response returns stub response and cons
       calls.some(([name]) => name === "updateRequest"),
       true,
     );
+  } finally {
+    await app.close();
+  }
+});
+
+await runCase("POST /v1/extension/review-response rejects review payloads outside the modal schema", async () => {
+  let apiKeyResolved = false;
+  const app = buildApiApp({
+    services: createExtensionServices({
+      async resolveExtensionApiKey() {
+        apiKeyResolved = true;
+        return null;
+      },
+    }),
+  });
+
+  try {
+    const response = await app.inject({
+      method: "POST",
+      url: "/v1/extension/review-response",
+      headers: {
+        "x-api-key": "test-key",
+      },
+      payload: {
+        user_id: extensionUserId,
+        review: {
+          ...parsedReview,
+          rating: 6,
+        },
+      },
+    });
+
+    const payload = response.json();
+
+    assert.equal(response.statusCode, 400);
+    assert.equal(payload.error, "invalid_extension_request");
+    assert.equal(
+      payload.details.issues.some((issue) => issue.path === "review.rating"),
+      true,
+    );
+    assert.equal(apiKeyResolved, false);
   } finally {
     await app.close();
   }
