@@ -49,6 +49,7 @@
 - Added Next proxy response validation tests for `/api/admin/extension-api-keys...`.
 - Added source-level guard coverage that the admin API-key page requires database-backed admin access.
 - Added direct package scripts for the new extension/admin API-key test suites.
+- Hardened the minimal admin page by showing extension users and generation requests for the selected key, and by requiring API-key id confirmation before invalidation.
 
 ## Verified
 
@@ -101,8 +102,6 @@ The first admin page is intentionally minimal. Follow-up UI improvements:
 
 - add route to main app navigation only for admins;
 - add pagination/filtering;
-- show generation request rows and extension-user usage rows in the selected-key detail;
-- add confirmation before invalidation;
 - improve Russian/English dictionaries instead of hardcoded admin labels.
 
 ### 3. Follow-up integration

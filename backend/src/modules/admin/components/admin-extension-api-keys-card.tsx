@@ -38,6 +38,7 @@ export function AdminExtensionApiKeysCard() {
   const [quotaAmount, setQuotaAmount] = useState(10);
   const [quotaReason, setQuotaReason] = useState("");
   const [invalidationReason, setInvalidationReason] = useState("");
+  const [invalidationConfirm, setInvalidationConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -87,6 +88,7 @@ export function AdminExtensionApiKeysCard() {
       setCreatedRawKey(payload.rawApiKey);
       setFeedback("API key created. Copy it now; it will not be shown again.");
       setLabel("");
+      setQuota(10);
       await refreshList();
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : "Could not create API key.");
@@ -190,6 +192,11 @@ export function AdminExtensionApiKeysCard() {
       return;
     }
 
+    if (invalidationConfirm !== selectedDetail.apiKey.id) {
+      setError("Paste the selected API key id into the confirmation field before invalidating.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setFeedback(null);
@@ -211,6 +218,7 @@ export function AdminExtensionApiKeysCard() {
       }
 
       setFeedback("API key invalidated.");
+      setInvalidationConfirm("");
       await refreshList();
       await loadDetail(payload.apiKey.id);
     } catch (invalidateError) {
@@ -302,8 +310,20 @@ export function AdminExtensionApiKeysCard() {
           <Stack gap="md">
             <Title order={3}>Selected key</Title>
             <Text>ID: <code>{selectedDetail.apiKey.id}</code></Text>
-            <Text>Quota remaining: {selectedDetail.apiKey.quotaRemaining}</Text>
-            <Text>Status: {selectedDetail.apiKey.invalidatedAt ? `Invalidated at ${selectedDetail.apiKey.invalidatedAt}` : "Active"}</Text>
+            <Group gap="sm">
+              <Badge color={selectedDetail.apiKey.invalidatedAt ? "red" : "green"}>
+                {selectedDetail.apiKey.invalidatedAt ? "invalidated" : "active"}
+              </Badge>
+              <Text size="sm">
+                Quota: {selectedDetail.apiKey.quotaUsed} used / {selectedDetail.apiKey.quotaTotal} total / {selectedDetail.apiKey.quotaRemaining} remaining
+              </Text>
+            </Group>
+            {selectedDetail.apiKey.invalidatedAt ? (
+              <Text c="red" size="sm">
+                Invalidated at {selectedDetail.apiKey.invalidatedAt}
+                {selectedDetail.apiKey.invalidationReason ? ` (${selectedDetail.apiKey.invalidationReason})` : ""}
+              </Text>
+            ) : null}
 
             <Group align="end">
               <NumberInput label="Quota amount" min={1} max={1_000_000} value={quotaAmount} onChange={(value) => setQuotaAmount(Number(value) || 1)} />
@@ -312,17 +332,86 @@ export function AdminExtensionApiKeysCard() {
               <Button color="orange" loading={loading} onClick={() => adjustQuota("remove")}>Remove quota</Button>
             </Group>
 
-            <Group align="end">
+            <Stack gap="xs">
               <TextInput label="Invalidation reason" value={invalidationReason} onChange={(event) => setInvalidationReason(event.currentTarget.value)} />
-              <Button color="red" loading={loading} disabled={Boolean(selectedDetail.apiKey.invalidatedAt)} onClick={invalidateKey}>Invalidate</Button>
-            </Group>
+              <TextInput
+                label="Paste API key id to confirm invalidation"
+                value={invalidationConfirm}
+                onChange={(event) => setInvalidationConfirm(event.currentTarget.value)}
+              />
+              <Button
+                color="red"
+                loading={loading}
+                disabled={Boolean(selectedDetail.apiKey.invalidatedAt)}
+                onClick={invalidateKey}
+              >
+                Invalidate
+              </Button>
+            </Stack>
 
             <Title order={4}>Quota events</Title>
+            {selectedDetail.quotaEvents.length === 0 ? <Text c="dimmed">No quota events.</Text> : null}
             {selectedDetail.quotaEvents.map((event) => (
               <Text key={event.id} size="sm">
                 {event.createdAt}: {event.eventType} {event.amount} {event.reason ? `(${event.reason})` : ""}
               </Text>
             ))}
+
+            <Title order={4}>Extension users</Title>
+            {selectedDetail.users.length === 0 ? <Text c="dimmed">No extension users have used this key.</Text> : null}
+            {selectedDetail.users.length > 0 ? (
+              <Table.ScrollContainer minWidth={640}>
+                <Table verticalSpacing="xs">
+                  <Table.Thead>
+                    <Table.Tr>
+                      <Table.Th>User ID</Table.Th>
+                      <Table.Th>First seen</Table.Th>
+                      <Table.Th>Last seen</Table.Th>
+                    </Table.Tr>
+                  </Table.Thead>
+                  <Table.Tbody>
+                    {selectedDetail.users.map((user) => (
+                      <Table.Tr key={user.extensionUserId}>
+                        <Table.Td><code>{user.extensionUserId}</code></Table.Td>
+                        <Table.Td>{user.firstSeenAt}</Table.Td>
+                        <Table.Td>{user.lastSeenAt ?? "—"}</Table.Td>
+                      </Table.Tr>
+                    ))}
+                  </Table.Tbody>
+                </Table>
+              </Table.ScrollContainer>
+            ) : null}
+
+            <Title order={4}>Generation requests</Title>
+            {selectedDetail.requests.length === 0 ? <Text c="dimmed">No generation requests.</Text> : null}
+            {selectedDetail.requests.length > 0 ? (
+              <Table.ScrollContainer minWidth={720}>
+                <Table verticalSpacing="xs">
+                  <Table.Thead>
+                    <Table.Tr>
+                      <Table.Th>Created</Table.Th>
+                      <Table.Th>Status</Table.Th>
+                      <Table.Th>Quota</Table.Th>
+                      <Table.Th>User ID</Table.Th>
+                    </Table.Tr>
+                  </Table.Thead>
+                  <Table.Tbody>
+                    {selectedDetail.requests.map((request) => (
+                      <Table.Tr key={request.id}>
+                        <Table.Td>{request.createdAt}</Table.Td>
+                        <Table.Td>
+                          <Badge color={request.status === "succeeded" ? "green" : request.status === "failed" ? "red" : "gray"}>
+                            {request.status}
+                          </Badge>
+                        </Table.Td>
+                        <Table.Td>{request.quotaConsumed ? "consumed" : "not consumed"}</Table.Td>
+                        <Table.Td><code>{request.extensionUserId}</code></Table.Td>
+                      </Table.Tr>
+                    ))}
+                  </Table.Tbody>
+                </Table>
+              </Table.ScrollContainer>
+            ) : null}
 
             <Title order={4}>Recent errors</Title>
             {selectedDetail.errors.length === 0 ? <Text c="dimmed">No errors.</Text> : null}
