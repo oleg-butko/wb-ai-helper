@@ -803,7 +803,22 @@ function App() {
 						role='dialog'
 						aria-modal='true'
 						onClick={(event) => event.stopPropagation()}>
-						<div className='helper-modal-header'>
+						<div className='helper-modal-header helper-modal-toolbar'>
+							<div className='helper-modal-actions'>
+								<button
+									type='button'
+									className='helper-modal-primary'
+									disabled={generationStatus === 'loading'}
+									onClick={handleDevSend}>
+									Send
+								</button>
+								<button
+									type='button'
+									disabled={generationStatus === 'loading' || !generationText}
+									onClick={handleInsert}>
+									Insert
+								</button>
+							</div>
 							<button
 								type='button'
 								className='helper-modal-close'
@@ -892,22 +907,6 @@ function App() {
 								) : null}
 							</>
 						)}
-
-						<div className='helper-modal-actions'>
-							<button
-								type='button'
-								className='helper-modal-primary'
-								disabled={generationStatus === 'loading'}
-								onClick={handleDevSend}>
-								Send
-							</button>
-							<button
-								type='button'
-								disabled={generationStatus === 'loading' || !generationText}
-								onClick={handleInsert}>
-								Insert
-							</button>
-						</div>
 					</div>
 				</div>
 			)}

@@ -44,6 +44,10 @@
   border-bottom: 1px solid #e5e7eb;
 }
 
+.helper-modal-toolbar {
+  justify-content: space-between;
+}
+
 .helper-modal-header h2 {
   margin: 0;
   font-size: 1rem;
@@ -164,10 +168,7 @@
 
 .helper-modal-actions {
   display: flex;
-  justify-content: flex-end;
   gap: 0.5rem;
-  padding: 1rem;
-  border-top: 1px solid #e5e7eb;
 }
 
 .helper-modal-actions button {
