@@ -77,7 +77,7 @@ export async function checkOpenAiCompatibleChat({
         content: "Reply with exactly: ok",
       },
     ],
-    temperature: 0,
+    temperature: 1,
     maxTokens: 16,
     fetchImplementation,
   });
@@ -88,7 +88,7 @@ export async function createOpenAiCompatibleChatCompletion({
   apiKey,
   model,
   messages,
-  temperature = 0.2,
+  temperature = 1,
   maxTokens,
   fetchImplementation = globalThis.fetch,
 }) {

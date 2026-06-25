@@ -260,6 +260,7 @@ await runCase("POST /v1/admin/ai-provider-profiles/:profileId/check runs a chat 
     assert.equal(response.json().responseText, "ok");
     assert.equal(fetchCalls[0].url, "https://api.moonshot.ai/v1/chat/completions");
     assert.equal(fetchCalls[0].body.model, "kimi-k2.5");
+    assert.equal(fetchCalls[0].body.temperature, 1);
   } finally {
     globalThis.fetch = originalFetch;
     await app.close();

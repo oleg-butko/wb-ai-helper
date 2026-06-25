@@ -343,6 +343,7 @@ await runCase("POST /v1/extension/review-response calls the active provider and 
     assert.equal(providerCalls[0].url, "https://api.provider.example/v1/chat/completions");
     assert.equal(providerCalls[0].headers.authorization, "Bearer provider-secret");
     assert.equal(providerCalls[0].body.model, "test-model");
+    assert.equal(providerCalls[0].body.temperature, 1);
     assert.equal(providerCalls[0].body.messages[0].content, "Reply in Russian.");
     assert.match(providerCalls[0].body.messages[1].content, /Product: Парные худи/);
     assert.deepEqual(
