@@ -477,6 +477,9 @@ function createHelperButton(
 	wrapper.querySelectorAll('[id]').forEach((element) => {
 		element.removeAttribute('id')
 	})
+	wrapper.querySelectorAll('[role="img"]').forEach((element) => {
+		element.remove()
+	})
 
 	const button = wrapper.querySelector('button')
 
@@ -685,6 +688,8 @@ function App() {
 					.join('\n')
 			)
 			await addPopupHistory('Generated response was inserted into the drawer.')
+			setParsedInfo(null)
+			resetGenerationState()
 		} catch (error: unknown) {
 			const message =
 				error instanceof Error ? error.message : 'Could not insert generated text.'
@@ -787,10 +792,18 @@ function App() {
 	return (
 		<>
 			{parsedInfo && (
-				<div className='helper-modal-backdrop'>
-					<div className='helper-modal' role='dialog' aria-modal='true'>
+				<div
+					className='helper-modal-backdrop'
+					onClick={() => {
+						setParsedInfo(null)
+						resetGenerationState()
+					}}>
+					<div
+						className='helper-modal'
+						role='dialog'
+						aria-modal='true'
+						onClick={(event) => event.stopPropagation()}>
 						<div className='helper-modal-header'>
-							<h2>Parsed info</h2>
 							<button
 								type='button'
 								className='helper-modal-close'
@@ -900,8 +913,14 @@ function App() {
 			)}
 
 			{helperButtonWarning && (
-				<div className='helper-modal-backdrop'>
-					<div className='helper-modal' role='alertdialog' aria-modal='true'>
+				<div
+					className='helper-modal-backdrop'
+					onClick={() => setHelperButtonWarning(null)}>
+					<div
+						className='helper-modal helper-modal--warning'
+						role='alertdialog'
+						aria-modal='true'
+						onClick={(event) => event.stopPropagation()}>
 						<div className='helper-modal-header'>
 							<h2>{helperButtonWarning.title}</h2>
 							<button
