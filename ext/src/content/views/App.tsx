@@ -7,7 +7,6 @@ const helperButtonId = 'crxjs-helper-button'
 const helperButtonText = 'AI-ответ'
 const popupAlertStorageKey = 'popup_last_alert'
 const popupHistoryStorageKey = 'popup_history'
-const generationTimeoutMs = 60_000
 
 type HelperButtonWarning = {
 	title: string
@@ -57,6 +56,16 @@ type GenerationResult = {
 	diagnostics: GenerationDiagnostics | null
 }
 
+type GenerateReviewResponseResult =
+	| {
+			ok: true
+			payload: unknown
+	  }
+	| {
+			ok: false
+			message: string
+	  }
+
 type GenerationStatus = 'idle' | 'loading' | 'succeeded' | 'failed'
 
 const buttonsRootSelector =
@@ -69,37 +78,6 @@ const textSelector = 'span[data-name="Text"]'
 
 function getText(element: Element) {
 	return element.textContent?.trim() ?? ''
-}
-
-function normalizeApiBaseUrl(value: string) {
-	return value.trim().replace(/\/+$/, '')
-}
-
-function getApiMessage(payload: unknown) {
-	if (
-		typeof payload === 'object' &&
-		payload !== null &&
-		'message' in payload &&
-		typeof payload.message === 'string'
-	) {
-		return payload.message
-	}
-
-	return null
-}
-
-function getApiDetails(payload: unknown) {
-	if (
-		typeof payload === 'object' &&
-		payload !== null &&
-		'details' in payload &&
-		typeof payload.details === 'object' &&
-		payload.details !== null
-	) {
-		return JSON.stringify(payload.details)
-	}
-
-	return null
 }
 
 function formatDiagnostics(diagnostics: GenerationDiagnostics | null) {
@@ -146,20 +124,6 @@ async function savePopupAlert(message: string) {
 	await addPopupHistory(`Generation failed: ${message}`)
 }
 
-async function fetchWithTimeout(url: string, init: RequestInit) {
-	const controller = new AbortController()
-	const timeout = window.setTimeout(() => controller.abort(), generationTimeoutMs)
-
-	try {
-		return await fetch(url, {
-			...init,
-			signal: controller.signal
-		})
-	} finally {
-		window.clearTimeout(timeout)
-	}
-}
-
 function parseGenerationPayload(payload: unknown): GenerationResult | null {
 	if (
 		typeof payload !== 'object' ||
@@ -187,39 +151,20 @@ function parseGenerationPayload(payload: unknown): GenerationResult | null {
 }
 
 async function requestGeneration(review: ParsedInfo): Promise<GenerationResult> {
-	const config = await getExtensionConfig()
-	const apiBaseUrl = normalizeApiBaseUrl(config.API_BASE_URL)
-	const apiKey = config.API_KEY.trim()
+	const result = (await chrome.runtime.sendMessage({
+		type: 'wb-ai-helper/generate-review-response',
+		review
+	})) as GenerateReviewResponseResult | undefined
 
-	if (!apiBaseUrl) {
-		throw new Error('API_BASE_URL is empty. Open extension popup and set it in Dev Mode.')
+	if (!result) {
+		throw new Error('Background script did not return a generation response.')
 	}
 
-	if (!apiKey) {
-		throw new Error('API key is empty. Open extension popup and enter API key in Options.')
+	if (!result.ok) {
+		throw new Error(result.message)
 	}
 
-	const response = await fetchWithTimeout(`${apiBaseUrl}/v1/extension/review-response`, {
-		method: 'POST',
-		headers: {
-			'content-type': 'application/json',
-			'x-api-key': apiKey
-		},
-		body: JSON.stringify({
-			user_id: config.user_id,
-			review
-		})
-	})
-	const payload = (await response.json().catch(() => null)) as unknown
-
-	if (!response.ok) {
-		const details = getApiDetails(payload)
-		const message =
-			getApiMessage(payload) ?? `Generation request failed with HTTP ${response.status}.`
-		throw new Error(details ? `${message}\nDetails: ${details}` : message)
-	}
-
-	const generationResult = parseGenerationPayload(payload)
+	const generationResult = parseGenerationPayload(result.payload)
 
 	if (!generationResult) {
 		throw new Error('Generation response from API has unexpected format.')
