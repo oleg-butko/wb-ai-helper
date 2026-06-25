@@ -1,5 +1,11 @@
 # Changelog
 
+## Admin landing and frontend dev env
+
+Problem: after signing in as an admin, the Next frontend could throw because `SUPABASE_SERVICE_ROLE_KEY` existed in `.env.api.local` but `next dev` did not load that file. The root layout also emitted a React script-tag warning, and the home page still showed SaaS marketing sections instead of admin entry points.
+
+Solution: added a `dev:web` wrapper that loads `.env.api.local` before `next dev`, removed script tags from the root/admin-oriented home rendering, and replaced the marketing home content with admin links for extension API keys, AI-provider profiles, and workspace/user access.
+
 ## Admin AI-provider profiles
 
 Problem: admins need to configure an OpenAI-compatible AI provider, save its provider API key, choose a model, and verify that the configured provider works before the extension generation endpoint is connected to real AI output.

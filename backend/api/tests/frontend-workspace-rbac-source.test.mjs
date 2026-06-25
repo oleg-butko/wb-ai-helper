@@ -37,3 +37,19 @@ await runCase("app navigation includes API-key admin link only after admin check
   assert.match(navigationSource, /isAdmin/);
   assert.match(navigationSource, /\/admin\/api-keys/);
 });
+
+await runCase("marketing home page exposes admin links after admin check", async () => {
+  const pageSource = await readFile(
+    new URL("../../src/app/[locale]/(marketing)/page.tsx", import.meta.url),
+    "utf8",
+  );
+  const homeSource = await readFile(
+    new URL("../../src/components/marketing/home-page.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(pageSource, /isAdminEmail\(user\.email\)/);
+  assert.match(homeSource, /\/admin\/api-keys/);
+  assert.match(homeSource, /\/admin\/ai-providers/);
+  assert.match(homeSource, /showMarketingNav=\{false\}/);
+});

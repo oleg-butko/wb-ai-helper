@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { runCase } from "./helpers/test-helpers.mjs";
 
 import { getApiConfig } from "../config.mjs";
@@ -47,4 +48,19 @@ await runCase("api/server.mjs resolves storage env from .env.api.local", async (
       }
     }
   }
+});
+
+await runCase("dev:web loads server-only API env before next dev", async () => {
+  const packageJson = JSON.parse(
+    await readFile(new URL("../../package.json", import.meta.url), "utf8"),
+  );
+  const devWebSource = await readFile(
+    new URL("../../scripts/dev-web.mjs", import.meta.url),
+    "utf8",
+  );
+
+  assert.equal(packageJson.scripts["dev:web"], "node scripts/dev-web.mjs");
+  assert.match(devWebSource, /loadEnvFiles\(\["\.env\.api\.local", "\.env\.local"\]\)/);
+  assert.match(devWebSource, /nextBin/);
+  assert.match(devWebSource, /process\.execPath, \[nextBin, "dev"\]/);
 });

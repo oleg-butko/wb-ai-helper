@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { ColorSchemeScript } from "@mantine/core";
 import { headers } from "next/headers";
 
 import { AppProvider } from "@/components/app-provider";
@@ -30,9 +29,6 @@ export default async function RootLayout({
       lang={lang}
       suppressHydrationWarning
     >
-      <head>
-        <ColorSchemeScript defaultColorScheme="light" />
-      </head>
       <body>
         <AppProvider>{children}</AppProvider>
       </body>

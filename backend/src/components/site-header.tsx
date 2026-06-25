@@ -44,6 +44,7 @@ type SiteHeaderProps = {
   user: AuthenticatedUser | null;
   marketingModuleLinks?: LocalizedModuleNavItem[];
   appModuleLinks?: LocalizedModuleNavItem[];
+  showMarketingNav?: boolean;
 };
 
 export function SiteHeader({
@@ -52,6 +53,7 @@ export function SiteHeader({
   user,
   marketingModuleLinks = [],
   appModuleLinks = [],
+  showMarketingNav = true,
 }: SiteHeaderProps) {
   const { setColorScheme } = useMantineColorScheme();
   const [navOpened, navHandlers] = useDisclosure(false);
@@ -63,15 +65,20 @@ export function SiteHeader({
   });
 
   const isDark = mounted ? computedColorScheme === "dark" : false;
-  const navLinks = [
-    { href: `/${locale}#product`, label: dictionary.nav.product },
-    { href: `/${locale}#metrics`, label: dictionary.nav.metrics },
-    { href: `/${locale}#workflow`, label: dictionary.nav.workflow },
-    ...marketingModuleLinks.map((item) => ({
-      href: item.href,
-      label: item.label,
-    })),
-  ];
+  const navLinks = showMarketingNav
+    ? [
+        { href: `/${locale}#product`, label: dictionary.nav.product },
+        { href: `/${locale}#metrics`, label: dictionary.nav.metrics },
+        { href: `/${locale}#workflow`, label: dictionary.nav.workflow },
+        ...marketingModuleLinks.map((item) => ({
+          href: item.href,
+          label: item.label,
+        })),
+      ]
+    : marketingModuleLinks.map((item) => ({
+        href: item.href,
+        label: item.label,
+      }));
   const appNavLinks = appModuleLinks;
   const localizedPathname = pathname ?? `/${locale}`;
   const profilePath = `/${locale}/profile`;

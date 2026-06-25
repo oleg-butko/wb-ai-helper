@@ -1,5 +1,11 @@
 # Changelog
 
+## Admin landing and frontend dev env
+
+- Made `dev:web` load `.env.api.local` before `next dev` so server-only Supabase admin env is available to the frontend server.
+- Removed script tags from the root/admin-oriented home rendering to avoid React client script warnings.
+- Replaced SaaS marketing home content with admin links for API keys, AI providers, and workspace/user access.
+
 ## Admin AI-provider profiles
 
 - Added Supabase-backed admin AI-provider profiles for OpenAI-compatible providers.

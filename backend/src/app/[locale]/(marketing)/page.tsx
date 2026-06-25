@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { HomePage } from "@/components/marketing/home-page";
+import { isAdminEmail } from "@/lib/admin";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import {
@@ -71,10 +72,12 @@ export default async function LocalizedHomePage({ params }: LocalizedPageProps) 
   const resolvedLocale: Locale = isSupportedLocale(locale) ? locale : defaultLocale;
   const dictionary = getDictionary(resolvedLocale);
   const user = await getAuthenticatedUser();
+  const isAdmin = user ? await isAdminEmail(user.email) : false;
 
   return (
     <HomePage
       dictionary={dictionary}
+      isAdmin={isAdmin}
       locale={resolvedLocale}
       user={user}
     />
