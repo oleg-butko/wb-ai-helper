@@ -32,6 +32,11 @@ export function getAppNavigation(
       label: dictionary.app.adminApiKeys.navLabel,
       href: `/${locale}/admin/api-keys`,
     });
+    coreItems.push({
+      id: "admin-ai-providers",
+      label: "AI providers",
+      href: `/${locale}/admin/ai-providers`,
+    });
   }
 
   const moduleItems = getModuleNavItems("app", locale).map(({ id, label, href }) => ({

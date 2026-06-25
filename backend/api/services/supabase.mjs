@@ -130,8 +130,39 @@ function createRawExtensionApiKey() {
   return `wbai_${randomBytes(32).toString("base64url")}`;
 }
 
+function maskSecret(secret) {
+  if (typeof secret !== "string" || secret.length <= 8) {
+    return "********";
+  }
+
+  return `${secret.slice(0, 4)}…${secret.slice(-4)}`;
+}
+
 function getExtensionUserEmail(userId) {
   return `${userId}@extension.com`;
+}
+
+function mapAiProviderProfileRecord(item) {
+  return {
+    id: item.id,
+    label: item.label,
+    baseUrl: item.base_url,
+    defaultModel: item.default_model ?? null,
+    hasApiKey: Boolean(item.api_key_secret),
+    apiKeyPreview: item.api_key_secret ? maskSecret(item.api_key_secret) : null,
+    createdAt: item.created_at,
+    updatedAt: item.updated_at,
+  };
+}
+
+function mapAiProviderProfileSecretRecord(item) {
+  return {
+    id: item.id,
+    label: item.label,
+    baseUrl: item.base_url,
+    apiKey: item.api_key_secret,
+    defaultModel: item.default_model ?? null,
+  };
 }
 
 function mapExtensionApiKeyRecord(item) {
@@ -1088,6 +1119,104 @@ export function createApiServices(config = getApiConfig(), overrides = {}) {
       }
 
       return data ? mapExtensionApiKeyRecord(data) : null;
+    },
+    async listAdminAiProviderProfiles() {
+      const { data, error } = await adminClient
+        .from("ai_provider_profiles")
+        .select("id, label, base_url, api_key_secret, default_model, created_at, updated_at")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      return (data ?? []).map(mapAiProviderProfileRecord);
+    },
+    async createAdminAiProviderProfile({
+      label,
+      baseUrl,
+      apiKey,
+      defaultModel = null,
+      adminUserId,
+    }) {
+      const { data, error } = await adminClient
+        .from("ai_provider_profiles")
+        .insert({
+          label: label.trim(),
+          base_url: baseUrl.trim().replace(/\/+$/, ""),
+          api_key_secret: apiKey.trim(),
+          default_model: typeof defaultModel === "string" && defaultModel.trim() ? defaultModel.trim() : null,
+          created_by_admin_user_id: adminUserId,
+          updated_by_admin_user_id: adminUserId,
+        })
+        .select("id, label, base_url, api_key_secret, default_model, created_at, updated_at")
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      return mapAiProviderProfileRecord(data);
+    },
+    async updateAdminAiProviderProfile({
+      profileId,
+      label,
+      baseUrl,
+      apiKey,
+      defaultModel,
+    }) {
+      const patch = {};
+
+      if (label !== undefined) {
+        patch.label = label.trim();
+      }
+
+      if (baseUrl !== undefined) {
+        patch.base_url = baseUrl.trim().replace(/\/+$/, "");
+      }
+
+      if (apiKey !== undefined) {
+        patch.api_key_secret = apiKey.trim();
+      }
+
+      if (defaultModel !== undefined) {
+        patch.default_model =
+          typeof defaultModel === "string" && defaultModel.trim()
+            ? defaultModel.trim()
+            : null;
+      }
+
+      const { data, error } = await adminClient
+        .from("ai_provider_profiles")
+        .update(patch)
+        .eq("id", profileId)
+        .select("id, label, base_url, api_key_secret, default_model, created_at, updated_at")
+        .maybeSingle();
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data) {
+        const missingError = new Error("The requested AI provider profile was not found.");
+        missingError.code = "admin_ai_provider_profile_not_found";
+        throw missingError;
+      }
+
+      return mapAiProviderProfileRecord(data);
+    },
+    async getAdminAiProviderProfileSecret({ profileId }) {
+      const { data, error } = await adminClient
+        .from("ai_provider_profiles")
+        .select("id, label, base_url, api_key_secret, default_model")
+        .eq("id", profileId)
+        .maybeSingle();
+
+      if (error) {
+        throw error;
+      }
+
+      return data ? mapAiProviderProfileSecretRecord(data) : null;
     },
     async listAdminExtensionApiKeys({ limit = 50 } = {}) {
       const normalizedLimit = Number.isInteger(limit)

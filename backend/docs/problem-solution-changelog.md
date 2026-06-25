@@ -1,5 +1,11 @@
 # Changelog
 
+## Admin AI-provider profiles
+
+Problem: admins need to configure an OpenAI-compatible AI provider, save its provider API key, choose a model, and verify that the configured provider works before the extension generation endpoint is connected to real AI output.
+
+Solution: added Supabase-backed `ai_provider_profiles`, Fastify admin routes for profile create/list/update, model listing, and chat-completion checks, Next proxy routes, and an admin page at `/[locale]/admin/ai-providers`. Provider API keys are stored server-side and only masked previews are returned to the browser.
+
 ## Extension API foundation
 
 Problem: the extension needs a backend API that can be called without website registration while still enforcing API-key quota, creating Supabase-linked extension users, and preserving enough history for admin reports.

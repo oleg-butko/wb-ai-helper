@@ -1,5 +1,12 @@
 # Changelog
 
+## Admin AI-provider profiles
+
+- Added Supabase-backed admin AI-provider profiles for OpenAI-compatible providers.
+- Added Fastify and Next proxy routes for profile create/list/update, model listing, and provider checks.
+- Added `/[locale]/admin/ai-providers` with Kimi defaults for base URL/model.
+- Updated reset/bootstrap SQL scripts with the provider profile table.
+
 ## Extension API foundation
 
 - Added Supabase schema, Fastify route, service methods, and route coverage for extension API-key review-response calls with global quota and audit logs.

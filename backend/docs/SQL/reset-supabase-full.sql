@@ -24,6 +24,7 @@ drop table if exists public.extension_api_key_users cascade;
 drop table if exists public.extension_users cascade;
 drop table if exists public.extension_api_key_quota_events cascade;
 drop table if exists public.extension_api_keys cascade;
+drop table if exists public.ai_provider_profiles cascade;
 drop table if exists public.admins cascade;
 drop table if exists public.workspace_module_roles cascade;
 drop table if exists public.workspace_memberships cascade;
@@ -37,6 +38,7 @@ drop function if exists public.adjust_extension_api_key_quota(uuid, integer, tex
 drop function if exists public.consume_extension_api_key_quota(uuid, integer, uuid, text) cascade;
 drop function if exists public.handle_extension_generation_requests_updated_at() cascade;
 drop function if exists public.handle_extension_api_keys_updated_at() cascade;
+drop function if exists public.handle_ai_provider_profiles_updated_at() cascade;
 drop function if exists public.handle_workspace_module_roles_updated_at() cascade;
 drop function if exists public.handle_workspace_memberships_updated_at() cascade;
 drop function if exists public.handle_workspaces_updated_at() cascade;

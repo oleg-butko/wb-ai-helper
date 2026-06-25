@@ -64,6 +64,14 @@
   - `vendor_code_2`;
   - `colors`;
   - `size`.
+- Added admin AI-provider profile support for OpenAI-compatible providers:
+  - Supabase table `ai_provider_profiles`;
+  - Fastify admin routes for profile create/list/update, model listing, and provider check;
+  - Next proxy routes under `/api/admin/ai-provider-profiles`;
+  - admin page at `/[locale]/admin/ai-providers`;
+  - Kimi-oriented defaults (`https://api.moonshot.ai/v1`, `kimi-k2.5`);
+  - server-side provider API-key storage with only masked preview returned to the browser.
+- Updated `docs/SQL/reset-supabase-full.sql`, `docs/SQL/bootstrap-supabase-initial.sql`, and `docs/SQL/extension-api.sql` with the AI-provider profile schema.
 
 ## Verified
 
@@ -75,6 +83,8 @@
 - `npm run test:api:admin-workspace-routes`
 - `npm run test:api:next-proxy:admin-workspaces`
 - `npm run test:api:app-admin-access`
+- `npm run test:api:routes:admin-ai-provider-profiles`
+- `npm run test:api:all`
 - `npm run typecheck`
 - `npm run build`
 - `git diff --check`
@@ -87,7 +97,8 @@
 - Failed calls do not consume quota.
 - Generation steps and errors must be stored for admin reporting.
 - Extension auth uses `x-api-key`.
-- AI provider/model will be OpenAI API compatible and added later.
+- AI provider/model is OpenAI API compatible.
+- The first provider profile target is Kimi/Moonshot.
 - Responses should be stored in Supabase.
 - Admins are normal Supabase Auth users whose lowercased email is manually inserted into `public.admins`.
 - Admins must be able to paste a raw API key and retrieve its info/history.
@@ -116,7 +127,7 @@ No required manual UI hardening tasks remain for the current slice.
 
 ### 3. Follow-up integration
 
-When the AI provider config is provided:
+When the extension generation route is connected to the AI provider profile:
 
 - replace the stub generator with provider call;
 - keep generation events around provider start/success/failure;

@@ -470,6 +470,26 @@ create table if not exists public.admins (
 
 alter table public.admins enable row level security;
 
+create table if not exists public.ai_provider_profiles (
+  id uuid primary key default gen_random_uuid(),
+  label text not null,
+  base_url text not null,
+  api_key_secret text not null,
+  default_model text,
+  created_by_admin_user_id uuid references auth.users(id),
+  updated_by_admin_user_id uuid references auth.users(id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint ai_provider_profiles_label_not_empty check (length(trim(label)) > 0),
+  constraint ai_provider_profiles_base_url_not_empty check (length(trim(base_url)) > 0),
+  constraint ai_provider_profiles_api_key_not_empty check (length(trim(api_key_secret)) > 0)
+);
+
+create index if not exists ai_provider_profiles_created_idx
+on public.ai_provider_profiles (created_at desc);
+
+alter table public.ai_provider_profiles enable row level security;
+
 create table if not exists public.extension_api_keys (
   id uuid primary key default gen_random_uuid(),
   key_hash text not null unique,
@@ -614,6 +634,22 @@ create index if not exists extension_errors_code_created_idx
 on public.extension_errors (error_code, created_at desc);
 
 alter table public.extension_errors enable row level security;
+
+create or replace function public.handle_ai_provider_profiles_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+drop trigger if exists set_ai_provider_profiles_updated_at on public.ai_provider_profiles;
+create trigger set_ai_provider_profiles_updated_at
+before update on public.ai_provider_profiles
+for each row
+execute function public.handle_ai_provider_profiles_updated_at();
 
 create or replace function public.handle_extension_api_keys_updated_at()
 returns trigger
