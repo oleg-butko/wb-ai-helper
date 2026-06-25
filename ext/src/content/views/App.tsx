@@ -4,7 +4,9 @@ import { waitForElement } from '../utils/waitForElement'
 import './App.css'
 
 const helperButtonId = 'crxjs-helper-button'
-const helperButtonText = 'AI-ответ'
+const helperButtonText = '✨ AI-ответ'
+const helperButtonLoadingText = 'Генерируем...'
+const helperButtonDoneText = 'Готово ✓'
 const popupAlertStorageKey = 'popup_last_alert'
 const popupHistoryStorageKey = 'popup_history'
 
@@ -67,6 +69,7 @@ type GenerateReviewResponseResult =
 	  }
 
 type GenerationStatus = 'idle' | 'loading' | 'succeeded' | 'failed'
+type HelperButtonState = 'idle' | 'loading' | 'done'
 
 const buttonsRootSelector =
 	'#Portal-modal-extend-info > div > div > div > div > div > div > div > div > div > div > form > div:nth-child(2) > div'
@@ -405,6 +408,46 @@ function removeHelperButton() {
 	document.getElementById(helperButtonId)?.remove()
 }
 
+function getHelperButtonLabel(button: HTMLButtonElement) {
+	const spans = Array.from(button.querySelectorAll('span'))
+
+	return (
+		spans.find((span) => span.className.includes('caption__')) ??
+		spans[spans.length - 1] ??
+		button
+	)
+}
+
+function setHelperButtonLabel(button: HTMLButtonElement, text: string) {
+	getHelperButtonLabel(button).textContent = text
+}
+
+function setHelperButtonState(state: HelperButtonState) {
+	const wrapper = document.getElementById(helperButtonId)
+	const button = wrapper?.querySelector<HTMLButtonElement>('button')
+
+	if (!wrapper || !button) {
+		return
+	}
+
+	wrapper.dataset.helperState = state
+	button.disabled = state === 'loading'
+	button.setAttribute('aria-busy', state === 'loading' ? 'true' : 'false')
+	button.classList.add('crxjs-ai-reply-button')
+
+	if (state === 'loading') {
+		setHelperButtonLabel(button, helperButtonLoadingText)
+		return
+	}
+
+	if (state === 'done') {
+		setHelperButtonLabel(button, helperButtonDoneText)
+		return
+	}
+
+	setHelperButtonLabel(button, helperButtonText)
+}
+
 function findGenerateButton(buttonsRoot: HTMLElement) {
 	const previousSelectorButton =
 		document.querySelector<HTMLButtonElement>(buttonGenSelector)
@@ -428,32 +471,27 @@ function createHelperButton(
 ) {
 	const wrapper = buttonGenWrapper.cloneNode(true) as HTMLElement
 	wrapper.id = helperButtonId
+	wrapper.classList.add('crxjs-ai-reply-button-wrapper')
+	wrapper.dataset.helperState = 'idle'
 
 	wrapper.querySelectorAll('[id]').forEach((element) => {
 		element.removeAttribute('id')
 	})
 
 	const button = wrapper.querySelector('button')
-	const spans = button ? Array.from(button.querySelectorAll('span')) : []
-	const label =
-		spans.find((span) => span.className.includes('caption__')) ??
-		spans[spans.length - 1]
 
 	if (button) {
 		button.type = 'button'
 		button.disabled = false
 		button.removeAttribute('aria-disabled')
+		button.setAttribute('aria-busy', 'false')
+		button.classList.add('crxjs-ai-reply-button')
 		button.addEventListener('click', (event) => {
 			event.preventDefault()
 			event.stopPropagation()
 			onHelperClick()
 		})
-	}
-
-	if (label) {
-		label.textContent = helperButtonText
-	} else if (button) {
-		button.textContent = helperButtonText
+		setHelperButtonLabel(button, helperButtonText)
 	}
 
 	return wrapper
@@ -466,8 +504,9 @@ function createFallbackHelperButton(onHelperClick: () => void) {
 
 	const button = document.createElement('button')
 	button.type = 'button'
-	button.className = 'helper-fallback-button'
+	button.className = 'helper-fallback-button crxjs-ai-reply-button'
 	button.textContent = helperButtonText
+	button.setAttribute('aria-busy', 'false')
 	button.addEventListener('click', (event) => {
 		event.preventDefault()
 		event.stopPropagation()
@@ -574,11 +613,13 @@ function App() {
 		setGenerationDiagnostics('')
 		setGenerationStartedAt(null)
 		setGenerationSeconds(0)
+		setHelperButtonState('idle')
 	}
 
 	async function sendGeneration(review: ParsedInfo) {
 		const startedAt = Date.now()
 
+		setHelperButtonState('loading')
 		setGenerationStatus('loading')
 		setGenerationText('')
 		setGenerationMessage('')
@@ -596,6 +637,7 @@ function App() {
 			setGenerationDiagnostics(formatDiagnostics(result.diagnostics))
 			setGenerationSeconds(seconds)
 			setGenerationStartedAt(null)
+			setHelperButtonState('done')
 
 			return result
 		} catch (error: unknown) {
@@ -612,6 +654,7 @@ function App() {
 			setGenerationDiagnostics('')
 			setGenerationSeconds(seconds)
 			setGenerationStartedAt(null)
+			setHelperButtonState('idle')
 			await savePopupAlert(message)
 
 			throw error
@@ -635,6 +678,7 @@ function App() {
 
 		try {
 			insertGeneratedText(generationText)
+			setHelperButtonState('done')
 			setGenerationMessage((currentMessage) =>
 				[currentMessage, 'Generated text was inserted into the answer field.']
 					.filter(Boolean)
@@ -646,6 +690,7 @@ function App() {
 				error instanceof Error ? error.message : 'Could not insert generated text.'
 			setGenerationStatus('failed')
 			setGenerationMessage(message)
+			setHelperButtonState('idle')
 			await savePopupAlert(message)
 		}
 	}
@@ -680,8 +725,10 @@ function App() {
 								return
 							}
 
+							setHelperButtonState('loading')
 							const result = await requestGeneration(parsed)
 							insertGeneratedText(result.text)
+							setHelperButtonState('done')
 							await addPopupHistory(
 								'Generated response was inserted without dev modal.'
 							)
@@ -692,6 +739,7 @@ function App() {
 									: error instanceof Error
 										? error.message
 										: 'Generation request failed.'
+							setHelperButtonState('idle')
 							await savePopupAlert(message)
 						}
 					})()
