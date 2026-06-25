@@ -1,5 +1,9 @@
 # Changelog
 
+## Prompt preview dark-theme surface
+
+- Removed fixed `gray.0` backgrounds from AI prompt preview cards so dark theme uses theme-aware surfaces.
+
 ## Admin AI prompt profiles
 
 - Added globally active AI prompt profiles with system prompt, product-details template, example parsed JSON, and preview rendering.

@@ -1,5 +1,11 @@
 # Changelog
 
+## Prompt preview dark-theme surface
+
+Problem: the AI prompt preview cards forced `gray.0` as their background, which looked correct in light theme but produced a white surface with low-contrast text in dark theme.
+
+Solution: removed the fixed light background from prompt preview cards so Mantine can use the current theme surface and text colors.
+
 ## Admin AI prompt profiles
 
 Problem: admins need to edit the system prompt and control how parsed extension review JSON becomes the product-details user prompt, with preview before the generation endpoint is connected to real AI output.

@@ -305,11 +305,11 @@ export function AdminAiPromptProfilesCard() {
             {preview ? (
               <Stack gap="sm">
                 <Text fw={700}>system_prompt</Text>
-                <Card withBorder bg="gray.0">
+                <Card withBorder>
                   <Text style={{ whiteSpace: "pre-wrap" }}>{preview.systemPrompt}</Text>
                 </Card>
                 <Text fw={700}>Rendered product_details prompt</Text>
-                <Card withBorder bg="gray.0">
+                <Card withBorder>
                   <Text style={{ whiteSpace: "pre-wrap" }}>{preview.productDetailsPrompt}</Text>
                 </Card>
               </Stack>

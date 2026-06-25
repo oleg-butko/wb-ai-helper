@@ -67,3 +67,13 @@ await runCase("admin API key filters are debounced and reason inputs are isolate
   assert.match(source, /const QuotaControls = memo/);
   assert.match(source, /const InvalidationControls = memo/);
 });
+
+await runCase("admin prompt preview does not force a light background", async () => {
+  const source = await readFile(
+    new URL("../../src/modules/admin/components/admin-ai-prompt-profiles-card.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.doesNotMatch(source, /bg="gray\.0"/);
+  assert.match(source, /Rendered product_details prompt/);
+});
