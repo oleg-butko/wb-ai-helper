@@ -13,6 +13,7 @@ function createProfile(overrides = {}) {
     label: "Kimi profile",
     baseUrl: "https://api.moonshot.ai/v1",
     defaultModel: "kimi-k2.5",
+    isActive: false,
     hasApiKey: true,
     apiKeyPreview: "sk-j…JqAK",
     createdAt: "2026-06-25T00:00:00.000Z",
@@ -45,6 +46,11 @@ function createServices(overrides = {}) {
     async updateAdminAiProviderProfile(input) {
       return createProfile({
         defaultModel: input.defaultModel,
+      });
+    },
+    async activateAdminAiProviderProfile() {
+      return createProfile({
+        isActive: true,
       });
     },
     async getAdminAiProviderProfileSecret() {
@@ -149,6 +155,41 @@ await runCase("POST /v1/admin/ai-provider-profiles creates a profile without ret
         baseUrl: "https://api.moonshot.ai/v1",
         apiKey: "sk-secret",
         defaultModel: "kimi-k2.5",
+        adminUserId,
+      },
+    ]);
+  } finally {
+    await app.close();
+  }
+});
+
+await runCase("POST /v1/admin/ai-provider-profiles/:profileId/activate activates a profile", async () => {
+  const calls = [];
+  const app = buildApiApp({
+    services: createServices({
+      async activateAdminAiProviderProfile(input) {
+        calls.push(input);
+        return createProfile({
+          isActive: true,
+        });
+      },
+    }),
+  });
+
+  try {
+    const response = await app.inject({
+      method: "POST",
+      url: `/v1/admin/ai-provider-profiles/${profileId}/activate`,
+      headers: {
+        authorization: "Bearer valid-token",
+      },
+    });
+
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.json().profile.isActive, true);
+    assert.deepEqual(calls, [
+      {
+        profileId,
         adminUserId,
       },
     ]);

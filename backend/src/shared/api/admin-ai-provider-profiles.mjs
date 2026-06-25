@@ -5,6 +5,7 @@ export const adminAiProviderProfileSchema = z.object({
   label: z.string(),
   baseUrl: z.string(),
   defaultModel: z.string().nullable(),
+  isActive: z.boolean(),
   hasApiKey: z.boolean(),
   apiKeyPreview: z.string().nullable().optional(),
   createdAt: z.string(),
@@ -37,6 +38,10 @@ export const updateAdminAiProviderProfileResponseSchema = z.object({
   profile: adminAiProviderProfileSchema,
 });
 
+export const activateAdminAiProviderProfileResponseSchema = z.object({
+  profile: adminAiProviderProfileSchema,
+});
+
 export const adminAiProviderModelSchema = z.object({
   id: z.string(),
 });
@@ -59,6 +64,7 @@ export const adminAiProviderProfileErrorCodeSchema = z.enum([
   "admin_ai_provider_profile_invalid",
   "admin_ai_provider_profile_create_failed",
   "admin_ai_provider_profile_update_failed",
+  "admin_ai_provider_profile_activate_failed",
   "admin_ai_provider_profile_list_failed",
   "admin_ai_provider_profile_models_failed",
   "admin_ai_provider_profile_check_failed",

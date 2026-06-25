@@ -37,6 +37,7 @@ drop table if exists public.profiles cascade;
 -- Drop project helper triggers/functions.
 drop function if exists public.adjust_extension_api_key_quota(uuid, integer, text, uuid) cascade;
 drop function if exists public.consume_extension_api_key_quota(uuid, integer, uuid, text) cascade;
+drop function if exists public.activate_ai_provider_profile(uuid, uuid) cascade;
 drop function if exists public.activate_ai_prompt_profile(uuid, uuid) cascade;
 drop function if exists public.handle_ai_prompt_profiles_updated_at() cascade;
 drop function if exists public.handle_extension_generation_requests_updated_at() cascade;

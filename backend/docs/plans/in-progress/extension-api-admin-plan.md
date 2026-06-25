@@ -33,7 +33,7 @@
   - `extension_generation_events`;
   - `extension_errors`;
   - `consume_extension_api_key_quota(...)`.
-- Added stub review-response output with backend diagnostics until the OpenAI-compatible provider is configured.
+- Added initial stub review-response output with backend diagnostics until the OpenAI-compatible provider is configured.
 - Ensured no extension Supabase user is created when the API key is invalid, invalidated, or out of quota.
 - Ensured quota is checked before generation and consumed only after successful generation.
 - Switched app-admin checks toward Supabase `public.admins`.
@@ -72,6 +72,19 @@
   - Kimi-oriented defaults (`https://api.moonshot.ai/v1`, `kimi-k2.5`);
   - server-side provider API-key storage with only masked preview returned to the browser.
 - Updated `docs/SQL/reset-supabase-full.sql`, `docs/SQL/bootstrap-supabase-initial.sql`, and `docs/SQL/extension-api.sql` with the AI-provider profile schema.
+- Added one globally active AI-provider profile:
+  - `ai_provider_profiles.is_active`;
+  - unique partial active-profile index;
+  - `activate_ai_provider_profile(...)` RPC;
+  - Fastify and Next proxy activation routes;
+  - admin UI active/inactive status and activation action.
+- Connected `POST /v1/extension/review-response` to the active prompt profile and active OpenAI-compatible provider profile:
+  - renders the active product-details template from the extension review JSON;
+  - calls the active provider `/chat/completions` endpoint with active provider default model;
+  - records prompt-rendered, provider-started, provider-succeeded, quota-consumed, and error events;
+  - consumes quota only after provider text is generated successfully;
+  - stores the provider response and diagnostics in the generation request row;
+  - returns explicit configuration errors when the active prompt/provider/model is missing.
 
 ## Verified
 
@@ -84,6 +97,7 @@
 - `npm run test:api:next-proxy:admin-workspaces`
 - `npm run test:api:app-admin-access`
 - `npm run test:api:routes:admin-ai-provider-profiles`
+- `npm run test:api:routes:extension`
 - `npm run test:api:all`
 - `npm run typecheck`
 - `npm run build`
@@ -127,9 +141,4 @@ No required manual UI hardening tasks remain for the current slice.
 
 ### 3. Follow-up integration
 
-When the extension generation route is connected to the AI provider profile:
-
-- replace the stub generator with provider call;
-- keep generation events around provider start/success/failure;
-- store model/provider/request/response metadata;
-- consume quota only after provider success.
+No required provider-integration tasks remain for the current slice.

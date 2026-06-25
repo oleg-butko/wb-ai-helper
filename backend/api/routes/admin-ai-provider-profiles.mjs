@@ -107,6 +107,35 @@ export async function registerAdminAiProviderProfileRoutes(app) {
     }
   });
 
+  app.post("/v1/admin/ai-provider-profiles/:profileId/activate", async (request, reply) => {
+    const authentication = await resolveAppAdminRequest(request, reply);
+
+    if (!authentication.ok) {
+      return authentication.response;
+    }
+
+    try {
+      const profile = await request.server.services.activateAdminAiProviderProfile({
+        profileId: request.params.profileId,
+        adminUserId: authentication.user.id,
+      });
+
+      return reply.send({ profile });
+    } catch (error) {
+      const handled = mapAdminAiProviderProfileError(error, reply);
+
+      if (handled) {
+        return handled;
+      }
+
+      request.log.error({ err: error }, "Admin AI provider profile activate failed");
+      return reply.code(500).send({
+        error: "admin_ai_provider_profile_activate_failed",
+        message: "The backend could not activate the AI provider profile.",
+      });
+    }
+  });
+
   app.get("/v1/admin/ai-provider-profiles/:profileId/models", async (request, reply) => {
     const authentication = await resolveAppAdminRequest(request, reply);
 

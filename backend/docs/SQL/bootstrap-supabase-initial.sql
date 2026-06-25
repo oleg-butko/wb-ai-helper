@@ -476,6 +476,7 @@ create table if not exists public.ai_provider_profiles (
   base_url text not null,
   api_key_secret text not null,
   default_model text,
+  is_active boolean not null default false,
   created_by_admin_user_id uuid references auth.users(id),
   updated_by_admin_user_id uuid references auth.users(id),
   created_at timestamptz not null default now(),
@@ -487,6 +488,10 @@ create table if not exists public.ai_provider_profiles (
 
 create index if not exists ai_provider_profiles_created_idx
 on public.ai_provider_profiles (created_at desc);
+
+create unique index if not exists ai_provider_profiles_one_active_idx
+on public.ai_provider_profiles ((is_active))
+where is_active = true;
 
 alter table public.ai_provider_profiles enable row level security;
 
@@ -724,6 +729,52 @@ create trigger set_extension_generation_requests_updated_at
 before update on public.extension_generation_requests
 for each row
 execute function public.handle_extension_generation_requests_updated_at();
+
+create or replace function public.activate_ai_provider_profile(
+  profile_id uuid,
+  admin_user_id uuid
+)
+returns table (
+  id uuid,
+  label text,
+  base_url text,
+  api_key_secret text,
+  default_model text,
+  is_active boolean,
+  created_at timestamptz,
+  updated_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not exists (select 1 from public.ai_provider_profiles where ai_provider_profiles.id = profile_id) then
+    return;
+  end if;
+
+  update public.ai_provider_profiles
+  set is_active = false,
+      updated_by_admin_user_id = admin_user_id
+  where is_active = true
+    and id <> profile_id;
+
+  return query
+  update public.ai_provider_profiles
+  set is_active = true,
+      updated_by_admin_user_id = admin_user_id
+  where ai_provider_profiles.id = profile_id
+  returning
+    ai_provider_profiles.id,
+    ai_provider_profiles.label,
+    ai_provider_profiles.base_url,
+    ai_provider_profiles.api_key_secret,
+    ai_provider_profiles.default_model,
+    ai_provider_profiles.is_active,
+    ai_provider_profiles.created_at,
+    ai_provider_profiles.updated_at;
+end;
+$$;
 
 create or replace function public.activate_ai_prompt_profile(
   profile_id uuid,

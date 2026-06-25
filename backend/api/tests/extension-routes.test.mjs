@@ -6,6 +6,8 @@ import { createServices, runCase } from "./helpers/route-test-helpers.mjs";
 const extensionUserId = "c2a5f455-c2a5-7338-9883-02f3edc500a7";
 const apiKeyId = "11111111-1111-4111-8111-111111111111";
 const requestId = "22222222-2222-4222-8222-222222222222";
+const promptProfileId = "33333333-3333-4333-8333-333333333333";
+const providerProfileId = "44444444-4444-4444-8444-444444444444";
 const parsedReview = {
   name: "Наталья",
   product_details: ["Покупка: 10.06.2026", "Плюсы: Ничего", "Минусы: плохое качество"],
@@ -47,6 +49,28 @@ function createExtensionServices(overrides = {}) {
         id: extensionUserId,
         email: `${extensionUserId}@extension.com`,
         created: true,
+      };
+    },
+    async getActiveAiPromptProfile() {
+      return {
+        id: promptProfileId,
+        label: "Active prompt",
+        systemPrompt: "Reply in Russian.",
+        productDetailsTemplate: "Product: {{product_name}}\nRating: {{rating}}",
+        examplePayload: parsedReview,
+        isActive: true,
+        createdAt: "2026-06-25T00:00:00.000Z",
+        updatedAt: "2026-06-25T00:00:00.000Z",
+      };
+    },
+    async getActiveAiProviderProfileSecret() {
+      return {
+        id: providerProfileId,
+        label: "Active provider",
+        baseUrl: "https://api.provider.example/v1",
+        apiKey: "provider-secret",
+        defaultModel: "test-model",
+        isActive: true,
       };
     },
     async consumeExtensionApiQuota() {
@@ -243,8 +267,16 @@ await runCase("POST /v1/extension/review-response rejects exhausted quota before
   }
 });
 
-await runCase("POST /v1/extension/review-response returns stub response and consumes quota on success", async () => {
+await runCase("POST /v1/extension/review-response calls the active provider and consumes quota on success", async () => {
+  const originalFetch = globalThis.fetch;
   const calls = [];
+  const providerCalls = [];
+  globalThis.fetch = async (url, init) => {
+    providerCalls.push({ url: url.toString(), body: JSON.parse(init.body), headers: init.headers });
+    return Response.json({
+      choices: [{ message: { content: "Спасибо за отзыв. Нам жаль, что товар не подошел." } }],
+    });
+  };
   const app = buildApiApp({
     services: createExtensionServices({
       async createExtensionGenerationRequest(input) {
@@ -300,10 +332,19 @@ await runCase("POST /v1/extension/review-response returns stub response and cons
 
     assert.equal(response.statusCode, 200);
     assert.equal(payload.ok, true);
+    assert.equal(payload.response.text, "Спасибо за отзыв. Нам жаль, что товар не подошел.");
     assert.equal(payload.response.diagnostics.backend, "fastify");
-    assert.equal(payload.response.diagnostics.mode, "stub");
+    assert.equal(payload.response.diagnostics.mode, "provider");
     assert.equal(payload.response.diagnostics.requestId, requestId);
     assert.equal(payload.response.diagnostics.quotaRemaining, 6);
+    assert.equal(payload.response.diagnostics.providerProfileId, providerProfileId);
+    assert.equal(payload.response.diagnostics.promptProfileId, promptProfileId);
+    assert.equal(payload.response.diagnostics.model, "test-model");
+    assert.equal(providerCalls[0].url, "https://api.provider.example/v1/chat/completions");
+    assert.equal(providerCalls[0].headers.authorization, "Bearer provider-secret");
+    assert.equal(providerCalls[0].body.model, "test-model");
+    assert.equal(providerCalls[0].body.messages[0].content, "Reply in Russian.");
+    assert.match(providerCalls[0].body.messages[1].content, /Product: Парные худи/);
     assert.deepEqual(
       calls
         .filter(([name]) => name === "event")
@@ -312,6 +353,7 @@ await runCase("POST /v1/extension/review-response returns stub response and cons
         "request_received",
         "api_key_validated",
         "user_created",
+        "prompt_rendered",
         "ai_generation_started",
         "ai_generation_succeeded",
         "quota_consumed",
@@ -321,10 +363,62 @@ await runCase("POST /v1/extension/review-response returns stub response and cons
       calls.some(([name]) => name === "consumeQuota"),
       true,
     );
+    assert.deepEqual(
+      calls.find(([name]) => name === "consumeQuota")[1],
+      {
+        apiKeyId,
+        requestId,
+        amount: 1,
+        reason: "review_response_ai_succeeded",
+      },
+    );
     assert.equal(
       calls.some(([name]) => name === "updateRequest"),
       true,
     );
+  } finally {
+    globalThis.fetch = originalFetch;
+    await app.close();
+  }
+});
+
+await runCase("POST /v1/extension/review-response rejects missing active provider without consuming quota", async () => {
+  let consumeQuotaCalled = false;
+  const errors = [];
+  const app = buildApiApp({
+    services: createExtensionServices({
+      async getActiveAiProviderProfileSecret() {
+        return null;
+      },
+      async consumeExtensionApiQuota() {
+        consumeQuotaCalled = true;
+        return null;
+      },
+      async recordExtensionError(input) {
+        errors.push(input);
+      },
+    }),
+  });
+
+  try {
+    const response = await app.inject({
+      method: "POST",
+      url: "/v1/extension/review-response",
+      headers: {
+        "x-api-key": "test-key",
+      },
+      payload: {
+        user_id: extensionUserId,
+        review: parsedReview,
+      },
+    });
+    const payload = response.json();
+
+    assert.equal(response.statusCode, 503);
+    assert.equal(payload.error, "active_ai_provider_profile_missing");
+    assert.equal(payload.message, "No active AI provider profile is configured.");
+    assert.equal(consumeQuotaCalled, false);
+    assert.equal(errors[0].errorCode, "active_ai_provider_profile_missing");
   } finally {
     await app.close();
   }

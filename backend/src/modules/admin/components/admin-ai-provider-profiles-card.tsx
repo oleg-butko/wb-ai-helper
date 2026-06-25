@@ -1,6 +1,6 @@
 "use client";
 
-import { Alert, Button, Card, Group, PasswordInput, Select, Stack, Table, Text, TextInput, Title } from "@mantine/core";
+import { Alert, Badge, Button, Card, Group, PasswordInput, Select, Stack, Table, Text, TextInput, Title } from "@mantine/core";
 import { useCallback, useEffect, useState } from "react";
 
 import type {
@@ -77,7 +77,7 @@ export function AdminAiProviderProfilesCard() {
 
     const nextSelectedProfile =
       payload.profiles.find((profile) => profile.id === (preferredProfileId ?? selectedProfileId)) ??
-      (!selectedProfileId ? payload.profiles[0] : null);
+      (!selectedProfileId ? (payload.profiles.find((profile) => profile.isActive) ?? payload.profiles[0]) : null);
 
     if (nextSelectedProfile) {
       setSelectedProfileId(nextSelectedProfile.id);
@@ -225,6 +225,34 @@ export function AdminAiProviderProfilesCard() {
     }
   }
 
+  async function activateProfile() {
+    if (!selectedProfileId) {
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setFeedback(null);
+
+    try {
+      const response = await fetch(`/api/admin/ai-provider-profiles/${encodeURIComponent(selectedProfileId)}/activate`, {
+        method: "POST",
+      });
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(getPayloadMessage(payload) ?? "Could not activate AI provider profile.");
+      }
+
+      setFeedback("AI provider profile is now active.");
+      await refreshProfiles(selectedProfileId);
+    } catch (activateError) {
+      setError(activateError instanceof Error ? activateError.message : "Could not activate AI provider profile.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <Stack gap="lg">
       {error ? <Alert color="red">{error}</Alert> : null}
@@ -255,6 +283,7 @@ export function AdminAiProviderProfilesCard() {
                   <Table.Th>Label</Table.Th>
                   <Table.Th>Base URL</Table.Th>
                   <Table.Th>Default model</Table.Th>
+                  <Table.Th>Status</Table.Th>
                   <Table.Th>API key</Table.Th>
                   <Table.Th />
                 </Table.Tr>
@@ -265,6 +294,7 @@ export function AdminAiProviderProfilesCard() {
                     <Table.Td>{profile.label}</Table.Td>
                     <Table.Td>{profile.baseUrl}</Table.Td>
                     <Table.Td>{profile.defaultModel ?? "—"}</Table.Td>
+                    <Table.Td>{profile.isActive ? <Badge color="green">Active</Badge> : <Badge variant="light">Inactive</Badge>}</Table.Td>
                     <Table.Td>{profile.apiKeyPreview ?? (profile.hasApiKey ? "saved" : "missing")}</Table.Td>
                     <Table.Td>
                       <Button
@@ -292,7 +322,10 @@ export function AdminAiProviderProfilesCard() {
         <Stack gap="md">
           <Title order={3}>Models and check</Title>
           {selectedProfile ? (
-            <Text size="sm">Selected: {selectedProfile.label}</Text>
+            <Group gap="xs">
+              <Text size="sm">Selected: {selectedProfile.label}</Text>
+              {selectedProfile.isActive ? <Badge color="green">Active globally</Badge> : <Badge variant="light">Inactive</Badge>}
+            </Group>
           ) : (
             <Text size="sm">Create or select a provider profile first.</Text>
           )}
@@ -302,6 +335,9 @@ export function AdminAiProviderProfilesCard() {
             </Button>
             <Button disabled={!selectedProfileId} loading={loading} onClick={checkProfile}>
               Check provider
+            </Button>
+            <Button disabled={!selectedProfileId || Boolean(selectedProfile?.isActive)} loading={loading} onClick={activateProfile}>
+              Activate globally
             </Button>
           </Group>
           <Select

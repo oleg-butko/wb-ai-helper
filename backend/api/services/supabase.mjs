@@ -148,6 +148,7 @@ function mapAiProviderProfileRecord(item) {
     label: item.label,
     baseUrl: item.base_url,
     defaultModel: item.default_model ?? null,
+    isActive: Boolean(item.is_active),
     hasApiKey: Boolean(item.api_key_secret),
     apiKeyPreview: item.api_key_secret ? maskSecret(item.api_key_secret) : null,
     createdAt: item.created_at,
@@ -162,6 +163,7 @@ function mapAiProviderProfileSecretRecord(item) {
     baseUrl: item.base_url,
     apiKey: item.api_key_secret,
     defaultModel: item.default_model ?? null,
+    isActive: Boolean(item.is_active),
   };
 }
 
@@ -1136,7 +1138,8 @@ export function createApiServices(config = getApiConfig(), overrides = {}) {
     async listAdminAiProviderProfiles() {
       const { data, error } = await adminClient
         .from("ai_provider_profiles")
-        .select("id, label, base_url, api_key_secret, default_model, created_at, updated_at")
+        .select("id, label, base_url, api_key_secret, default_model, is_active, created_at, updated_at")
+        .order("is_active", { ascending: false })
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -1162,7 +1165,7 @@ export function createApiServices(config = getApiConfig(), overrides = {}) {
           created_by_admin_user_id: adminUserId,
           updated_by_admin_user_id: adminUserId,
         })
-        .select("id, label, base_url, api_key_secret, default_model, created_at, updated_at")
+        .select("id, label, base_url, api_key_secret, default_model, is_active, created_at, updated_at")
         .single();
 
       if (error) {
@@ -1203,7 +1206,7 @@ export function createApiServices(config = getApiConfig(), overrides = {}) {
         .from("ai_provider_profiles")
         .update(patch)
         .eq("id", profileId)
-        .select("id, label, base_url, api_key_secret, default_model, created_at, updated_at")
+        .select("id, label, base_url, api_key_secret, default_model, is_active, created_at, updated_at")
         .maybeSingle();
 
       if (error) {
@@ -1221,7 +1224,7 @@ export function createApiServices(config = getApiConfig(), overrides = {}) {
     async getAdminAiProviderProfileSecret({ profileId }) {
       const { data, error } = await adminClient
         .from("ai_provider_profiles")
-        .select("id, label, base_url, api_key_secret, default_model")
+        .select("id, label, base_url, api_key_secret, default_model, is_active")
         .eq("id", profileId)
         .maybeSingle();
 
@@ -1230,6 +1233,37 @@ export function createApiServices(config = getApiConfig(), overrides = {}) {
       }
 
       return data ? mapAiProviderProfileSecretRecord(data) : null;
+    },
+    async getActiveAiProviderProfileSecret() {
+      const { data, error } = await adminClient
+        .from("ai_provider_profiles")
+        .select("id, label, base_url, api_key_secret, default_model, is_active")
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (error) {
+        throw error;
+      }
+
+      return data ? mapAiProviderProfileSecretRecord(data) : null;
+    },
+    async activateAdminAiProviderProfile({ profileId, adminUserId }) {
+      const { data, error } = await adminClient.rpc("activate_ai_provider_profile", {
+        profile_id: profileId,
+        admin_user_id: adminUserId,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data || data.length === 0) {
+        const missingError = new Error("The requested AI provider profile was not found.");
+        missingError.code = "admin_ai_provider_profile_not_found";
+        throw missingError;
+      }
+
+      return mapAiProviderProfileRecord(data[0]);
     },
     async listAdminAiPromptProfiles() {
       const { data, error } = await adminClient
@@ -1324,6 +1358,19 @@ export function createApiServices(config = getApiConfig(), overrides = {}) {
         .from("ai_prompt_profiles")
         .select("id, label, system_prompt, product_details_template, example_payload, is_active, created_at, updated_at")
         .eq("id", profileId)
+        .maybeSingle();
+
+      if (error) {
+        throw error;
+      }
+
+      return data ? mapAiPromptProfileRecord(data) : null;
+    },
+    async getActiveAiPromptProfile() {
+      const { data, error } = await adminClient
+        .from("ai_prompt_profiles")
+        .select("id, label, system_prompt, product_details_template, example_payload, is_active, created_at, updated_at")
+        .eq("is_active", true)
         .maybeSingle();
 
       if (error) {

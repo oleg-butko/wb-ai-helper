@@ -4,6 +4,8 @@ import { ZodError } from "zod";
 
 import { extensionReviewRequestSchema } from "../../src/shared/api/extension.mjs";
 import { resolveExtensionApiKeyRequest } from "../lib/extension-auth.mjs";
+import { createOpenAiCompatibleChatCompletion } from "../lib/openai-compatible-provider.mjs";
+import { renderProductDetailsPrompt } from "../lib/prompt-template-renderer.mjs";
 
 const backendVersion = process.env.npm_package_version ?? "0.1.0";
 
@@ -14,19 +16,52 @@ function mapZodIssue(issue) {
   };
 }
 
-function createStubReviewResponse({ requestId, apiKeyRecord, userId, quotaRemaining }) {
+function createReviewResponse({
+  requestId,
+  apiKeyRecord,
+  userId,
+  quotaRemaining,
+  responseText,
+  providerProfile,
+  promptProfile,
+}) {
   return {
-    text: "Спасибо за отзыв. Мы внимательно изучим ситуацию и учтем ваши замечания в дальнейшей работе.",
+    text: responseText,
     diagnostics: {
       backend: "fastify",
       backendVersion,
-      mode: "stub",
+      mode: "provider",
       requestId,
       apiKeyId: apiKeyRecord.id,
       userId,
       quotaRemaining,
+      providerProfileId: providerProfile.id,
+      promptProfileId: promptProfile.id,
+      model: providerProfile.defaultModel,
     },
   };
+}
+
+function createConfigurationError({ code, message }) {
+  const error = new Error(message);
+  error.code = code;
+  return error;
+}
+
+function getReviewResponseErrorCode(error) {
+  if (error?.code === "extension_user_create_failed") {
+    return "extension_user_create_failed";
+  }
+
+  if (
+    error?.code === "active_ai_prompt_profile_missing" ||
+    error?.code === "active_ai_provider_profile_missing" ||
+    error?.code === "active_ai_provider_model_missing"
+  ) {
+    return error.code;
+  }
+
+  return "review_response_generation_failed";
 }
 
 async function safeRecordExtensionError(request, payload) {
@@ -152,21 +187,80 @@ export async function registerExtensionRoutes(app) {
         },
       });
 
+      const promptProfile = await request.server.services.getActiveAiPromptProfile();
+
+      if (!promptProfile) {
+        throw createConfigurationError({
+          code: "active_ai_prompt_profile_missing",
+          message: "No active AI prompt profile is configured.",
+        });
+      }
+
+      const providerProfile = await request.server.services.getActiveAiProviderProfileSecret();
+
+      if (!providerProfile) {
+        throw createConfigurationError({
+          code: "active_ai_provider_profile_missing",
+          message: "No active AI provider profile is configured.",
+        });
+      }
+
+      if (!providerProfile.defaultModel) {
+        throw createConfigurationError({
+          code: "active_ai_provider_model_missing",
+          message: "The active AI provider profile has no default model.",
+        });
+      }
+
+      const productDetailsPrompt = renderProductDetailsPrompt({
+        template: promptProfile.productDetailsTemplate,
+        payload: body.review,
+      });
+
+      await safeRecordExtensionGenerationEvent(request, {
+        requestId,
+        apiKeyId: authentication.apiKeyRecord.id,
+        extensionUserId: body.user_id,
+        eventType: "prompt_rendered",
+        details: {
+          prompt_profile_id: promptProfile.id,
+        },
+      });
+
       await safeRecordExtensionGenerationEvent(request, {
         requestId,
         apiKeyId: authentication.apiKeyRecord.id,
         extensionUserId: body.user_id,
         eventType: "ai_generation_started",
         details: {
-          mode: "stub",
+          mode: "provider",
+          provider_profile_id: providerProfile.id,
+          prompt_profile_id: promptProfile.id,
+          model: providerProfile.defaultModel,
         },
+      });
+
+      const responseText = await createOpenAiCompatibleChatCompletion({
+        baseUrl: providerProfile.baseUrl,
+        apiKey: providerProfile.apiKey,
+        model: providerProfile.defaultModel,
+        messages: [
+          {
+            role: "system",
+            content: promptProfile.systemPrompt,
+          },
+          {
+            role: "user",
+            content: productDetailsPrompt,
+          },
+        ],
       });
 
       const consumedQuota = await request.server.services.consumeExtensionApiQuota({
         apiKeyId: authentication.apiKeyRecord.id,
         requestId,
         amount: 1,
-        reason: "review_response_stub_succeeded",
+        reason: "review_response_ai_succeeded",
       });
 
       if (!consumedQuota) {
@@ -188,11 +282,14 @@ export async function registerExtensionRoutes(app) {
         });
       }
 
-      const stubResponse = createStubReviewResponse({
+      const reviewResponse = createReviewResponse({
         requestId,
         apiKeyRecord: authentication.apiKeyRecord,
         userId: body.user_id,
         quotaRemaining: consumedQuota.quotaRemaining,
+        responseText,
+        providerProfile,
+        promptProfile,
       });
 
       await safeRecordExtensionGenerationEvent(request, {
@@ -201,7 +298,10 @@ export async function registerExtensionRoutes(app) {
         extensionUserId: body.user_id,
         eventType: "ai_generation_succeeded",
         details: {
-          mode: "stub",
+          mode: "provider",
+          provider_profile_id: providerProfile.id,
+          prompt_profile_id: promptProfile.id,
+          model: providerProfile.defaultModel,
           quota_remaining: consumedQuota.quotaRemaining,
         },
       });
@@ -222,13 +322,13 @@ export async function registerExtensionRoutes(app) {
       await request.server.services.updateExtensionGenerationRequest({
         requestId,
         status: "succeeded",
-        responsePayload: stubResponse,
+        responsePayload: reviewResponse,
         quotaConsumed: true,
       });
 
       return reply.send({
         ok: true,
-        response: stubResponse,
+        response: reviewResponse,
       });
     } catch (error) {
       request.log.error({ err: error }, "Extension review response generation failed");
@@ -236,10 +336,7 @@ export async function registerExtensionRoutes(app) {
       const requestId = requestRecord?.id ?? randomUUID();
       const apiKeyId = authentication.apiKeyRecord.id;
 
-      const errorCode =
-        error?.code === "extension_user_create_failed"
-          ? "extension_user_create_failed"
-          : "review_response_generation_failed";
+      const errorCode = getReviewResponseErrorCode(error);
 
       await safeRecordExtensionError(request, {
         requestId,
@@ -248,6 +345,18 @@ export async function registerExtensionRoutes(app) {
         errorCode,
         errorMessage: error?.message ?? "Extension review response generation failed.",
         errorDetails: {
+          name: error?.name ?? "Error",
+          code: error?.code ?? null,
+        },
+      });
+
+      await safeRecordExtensionGenerationEvent(request, {
+        requestId,
+        apiKeyId,
+        extensionUserId: body.user_id,
+        eventType: "ai_generation_failed",
+        details: {
+          error_code: errorCode,
           name: error?.name ?? "Error",
           code: error?.code ?? null,
         },
@@ -262,11 +371,15 @@ export async function registerExtensionRoutes(app) {
         });
       }
 
-      return reply.code(errorCode === "extension_user_create_failed" ? 500 : 502).send({
+      const isConfigurationError = errorCode.startsWith("active_ai_");
+
+      return reply.code(errorCode === "extension_user_create_failed" ? 500 : isConfigurationError ? 503 : 502).send({
         error: errorCode,
         message:
           errorCode === "extension_user_create_failed"
             ? "The backend could not create or load the extension user."
+            : isConfigurationError
+              ? error.message
             : "The backend could not generate a review response.",
       });
     }

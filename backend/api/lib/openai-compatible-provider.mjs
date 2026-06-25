@@ -27,6 +27,19 @@ async function readJsonResponse(response) {
   return payload;
 }
 
+function extractChatCompletionText(payload) {
+  const responseText = payload?.choices?.[0]?.message?.content;
+
+  if (typeof responseText !== "string") {
+    const error = new Error("Provider chat completion response did not include message content.");
+    error.code = "provider_response_invalid";
+    error.payload = payload;
+    throw error;
+  }
+
+  return responseText.trim();
+}
+
 export async function listOpenAiCompatibleModels({
   baseUrl,
   apiKey,
@@ -50,27 +63,51 @@ export async function checkOpenAiCompatibleChat({
   model,
   fetchImplementation = globalThis.fetch,
 }) {
+  return createOpenAiCompatibleChatCompletion({
+    baseUrl,
+    apiKey,
+    model,
+    messages: [
+      {
+        role: "system",
+        content: "You are a concise connectivity checker.",
+      },
+      {
+        role: "user",
+        content: "Reply with exactly: ok",
+      },
+    ],
+    temperature: 0,
+    maxTokens: 16,
+    fetchImplementation,
+  });
+}
+
+export async function createOpenAiCompatibleChatCompletion({
+  baseUrl,
+  apiKey,
+  model,
+  messages,
+  temperature = 0.2,
+  maxTokens,
+  fetchImplementation = globalThis.fetch,
+}) {
+  const requestPayload = {
+    model,
+    messages,
+    temperature,
+  };
+
+  if (Number.isInteger(maxTokens) && maxTokens > 0) {
+    requestPayload.max_tokens = maxTokens;
+  }
+
   const response = await fetchImplementation(joinProviderUrl(baseUrl, "/chat/completions"), {
     method: "POST",
     headers: createProviderHeaders(apiKey),
-    body: JSON.stringify({
-      model,
-      messages: [
-        {
-          role: "system",
-          content: "You are a concise connectivity checker.",
-        },
-        {
-          role: "user",
-          content: "Reply with exactly: ok",
-        },
-      ],
-      temperature: 0,
-      max_tokens: 16,
-    }),
+    body: JSON.stringify(requestPayload),
   });
   const payload = await readJsonResponse(response);
-  const responseText = payload?.choices?.[0]?.message?.content;
 
-  return typeof responseText === "string" ? responseText.trim() : "";
+  return extractChatCompletionText(payload);
 }

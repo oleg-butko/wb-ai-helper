@@ -21,11 +21,14 @@ export const extensionReviewRequestSchema = z.object({
 export const extensionDiagnosticsSchema = z.object({
   backend: z.literal("fastify"),
   backendVersion: z.string(),
-  mode: z.literal("stub"),
+  mode: z.enum(["stub", "provider"]),
   requestId: z.string().uuid(),
   apiKeyId: z.string().uuid(),
   userId: z.string().uuid(),
   quotaRemaining: z.number().int().min(0),
+  providerProfileId: z.string().uuid().optional(),
+  promptProfileId: z.string().uuid().optional(),
+  model: z.string().optional(),
 });
 
 export const extensionReviewSuccessResponseSchema = z.object({
@@ -43,6 +46,9 @@ export const extensionReviewErrorCodeSchema = z.enum([
   "api_key_quota_exhausted",
   "invalid_extension_request",
   "extension_user_create_failed",
+  "active_ai_provider_profile_missing",
+  "active_ai_provider_model_missing",
+  "active_ai_prompt_profile_missing",
   "quota_consume_failed",
   "review_response_generation_failed",
   "internal_api_error",
