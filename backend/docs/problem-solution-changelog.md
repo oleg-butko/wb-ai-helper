@@ -1,5 +1,11 @@
 # Changelog
 
+## Admin API-key input responsiveness
+
+Problem: typing in unrelated admin API-key inputs, such as invalidation reason, could feel laggy because those input states lived in the same large React component that also rendered API-key tables, history, users, requests, and errors. The list filter also recomputed immediately on every keystroke.
+
+Solution: isolated quota/invalidation form state into small memoized controls, added a two-second debounce before applying the list filter, and showed a small spinner in the filter input while a pending filter is waiting to apply.
+
 ## API-key copy fallback
 
 Problem: the admin API-key page showed the one-time raw extension API key, but the Copy button could fail on local HTTP hostnames where the browser Clipboard API is unavailable or restricted.

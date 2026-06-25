@@ -1,7 +1,7 @@
 "use client";
 
-import { Alert, Badge, Button, Card, Group, NumberInput, Select, Stack, Table, Text, TextInput, Textarea, Title } from "@mantine/core";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Alert, Badge, Button, Card, Group, Loader, NumberInput, Select, Stack, Table, Text, TextInput, Textarea, Title } from "@mantine/core";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 
 import type {
   AdminExtensionApiKeyDetailResponse,
@@ -80,11 +80,9 @@ export function AdminExtensionApiKeysCard({ dictionary }: AdminExtensionApiKeysC
   const [label, setLabel] = useState("");
   const [quota, setQuota] = useState(10);
   const [searchKey, setSearchKey] = useState("");
-  const [quotaAmount, setQuotaAmount] = useState(10);
-  const [quotaReason, setQuotaReason] = useState("");
-  const [invalidationReason, setInvalidationReason] = useState("");
-  const [invalidationConfirm, setInvalidationConfirm] = useState("");
-  const [listFilter, setListFilter] = useState("");
+  const [listFilterInput, setListFilterInput] = useState("");
+  const [appliedListFilter, setAppliedListFilter] = useState("");
+  const [isFilterPending, setIsFilterPending] = useState(false);
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "invalidated">("all");
   const [page, setPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
@@ -93,7 +91,7 @@ export function AdminExtensionApiKeysCard({ dictionary }: AdminExtensionApiKeysC
   const pageSize = 10;
 
   const filteredApiKeys = useMemo(() => {
-    const normalizedFilter = listFilter.trim().toLowerCase();
+    const normalizedFilter = appliedListFilter.trim().toLowerCase();
 
     return apiKeys.filter((apiKey) => {
       const matchesStatus =
@@ -105,11 +103,27 @@ export function AdminExtensionApiKeysCard({ dictionary }: AdminExtensionApiKeysC
 
       return matchesStatus && matchesText;
     });
-  }, [apiKeys, listFilter, statusFilter]);
+  }, [apiKeys, appliedListFilter, statusFilter]);
 
   const pageCount = Math.max(Math.ceil(filteredApiKeys.length / pageSize), 1);
   const currentPage = Math.min(page, pageCount);
   const pagedApiKeys = filteredApiKeys.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  useEffect(() => {
+    if (listFilterInput === appliedListFilter) {
+      setIsFilterPending(false);
+      return undefined;
+    }
+
+    setIsFilterPending(true);
+    const timeout = window.setTimeout(() => {
+      setAppliedListFilter(listFilterInput);
+      setPage(1);
+      setIsFilterPending(false);
+    }, 2000);
+
+    return () => window.clearTimeout(timeout);
+  }, [appliedListFilter, listFilterInput]);
 
   const refreshList = useCallback(async () => {
     const response = await fetch("/api/admin/extension-api-keys?limit=50", {
@@ -219,7 +233,7 @@ export function AdminExtensionApiKeysCard({ dictionary }: AdminExtensionApiKeysC
     }
   }
 
-  async function adjustQuota(direction: "grant" | "remove") {
+  async function adjustQuota(direction: "grant" | "remove", amount: number, reason: string) {
     if (!selectedDetail) {
       return;
     }
@@ -236,8 +250,8 @@ export function AdminExtensionApiKeysCard({ dictionary }: AdminExtensionApiKeysC
         },
         body: JSON.stringify({
           direction,
-          amount: quotaAmount,
-          reason: quotaReason || undefined,
+          amount,
+          reason: reason || undefined,
         }),
       });
       const payload = await response.json().catch(() => null);
@@ -256,12 +270,12 @@ export function AdminExtensionApiKeysCard({ dictionary }: AdminExtensionApiKeysC
     }
   }
 
-  async function invalidateKey() {
+  async function invalidateKey({ confirmId, reason }: { confirmId: string; reason: string }) {
     if (!selectedDetail) {
       return;
     }
 
-    if (invalidationConfirm !== selectedDetail.apiKey.id) {
+    if (confirmId !== selectedDetail.apiKey.id) {
       setError(dictionary.invalidationConfirmError);
       return;
     }
@@ -277,7 +291,7 @@ export function AdminExtensionApiKeysCard({ dictionary }: AdminExtensionApiKeysC
           "content-type": "application/json",
         },
         body: JSON.stringify({
-          reason: invalidationReason || undefined,
+          reason: reason || undefined,
         }),
       });
       const payload = await response.json().catch(() => null);
@@ -287,7 +301,6 @@ export function AdminExtensionApiKeysCard({ dictionary }: AdminExtensionApiKeysC
       }
 
       setFeedback(dictionary.invalidated);
-      setInvalidationConfirm("");
       await refreshList();
       await loadDetail(payload.apiKey.id);
     } catch (invalidateError) {
@@ -356,10 +369,10 @@ export function AdminExtensionApiKeysCard({ dictionary }: AdminExtensionApiKeysC
           <Group grow align="end">
             <TextInput
               label={dictionary.filterLabel}
-              value={listFilter}
+              value={listFilterInput}
+              rightSection={isFilterPending ? <Loader size="xs" /> : null}
               onChange={(event) => {
-                setListFilter(event.currentTarget.value);
-                setPage(1);
+                setListFilterInput(event.currentTarget.value);
               }}
             />
             <Select
@@ -465,28 +478,19 @@ export function AdminExtensionApiKeysCard({ dictionary }: AdminExtensionApiKeysC
             ) : null}
 
             <Group align="end">
-              <NumberInput label={dictionary.quotaAmountLabel} min={1} max={1_000_000} value={quotaAmount} onChange={(value) => setQuotaAmount(Number(value) || 1)} />
-              <TextInput label={dictionary.reasonLabel} value={quotaReason} onChange={(event) => setQuotaReason(event.currentTarget.value)} />
-              <Button loading={loading} onClick={() => adjustQuota("grant")}>{dictionary.addQuota}</Button>
-              <Button color="orange" loading={loading} onClick={() => adjustQuota("remove")}>{dictionary.removeQuota}</Button>
+              <QuotaControls
+                dictionary={dictionary}
+                loading={loading}
+                onAdjustQuota={adjustQuota}
+              />
             </Group>
 
-            <Stack gap="xs">
-              <TextInput label={dictionary.invalidationReasonLabel} value={invalidationReason} onChange={(event) => setInvalidationReason(event.currentTarget.value)} />
-              <TextInput
-                label={dictionary.invalidationConfirmLabel}
-                value={invalidationConfirm}
-                onChange={(event) => setInvalidationConfirm(event.currentTarget.value)}
-              />
-              <Button
-                color="red"
-                loading={loading}
-                disabled={Boolean(selectedDetail.apiKey.invalidatedAt)}
-                onClick={invalidateKey}
-              >
-                {dictionary.invalidate}
-              </Button>
-            </Stack>
+            <InvalidationControls
+              dictionary={dictionary}
+              disabled={Boolean(selectedDetail.apiKey.invalidatedAt)}
+              loading={loading}
+              onInvalidate={invalidateKey}
+            />
 
             <Title order={4}>{dictionary.quotaEventsTitle}</Title>
             {selectedDetail.quotaEvents.length === 0 ? <Text c="dimmed">{dictionary.noQuotaEvents}</Text> : null}
@@ -565,3 +569,80 @@ export function AdminExtensionApiKeysCard({ dictionary }: AdminExtensionApiKeysC
     </Stack>
   );
 }
+
+const QuotaControls = memo(function QuotaControls({
+  dictionary,
+  loading,
+  onAdjustQuota,
+}: {
+  dictionary: AdminApiKeysDictionary;
+  loading: boolean;
+  onAdjustQuota: (direction: "grant" | "remove", amount: number, reason: string) => void;
+}) {
+  const [quotaAmount, setQuotaAmount] = useState(10);
+  const [quotaReason, setQuotaReason] = useState("");
+
+  return (
+    <>
+      <NumberInput
+        label={dictionary.quotaAmountLabel}
+        min={1}
+        max={1_000_000}
+        value={quotaAmount}
+        onChange={(value) => setQuotaAmount(Number(value) || 1)}
+      />
+      <TextInput
+        label={dictionary.reasonLabel}
+        value={quotaReason}
+        onChange={(event) => setQuotaReason(event.currentTarget.value)}
+      />
+      <Button loading={loading} onClick={() => onAdjustQuota("grant", quotaAmount, quotaReason)}>
+        {dictionary.addQuota}
+      </Button>
+      <Button color="orange" loading={loading} onClick={() => onAdjustQuota("remove", quotaAmount, quotaReason)}>
+        {dictionary.removeQuota}
+      </Button>
+    </>
+  );
+});
+
+const InvalidationControls = memo(function InvalidationControls({
+  dictionary,
+  disabled,
+  loading,
+  onInvalidate,
+}: {
+  dictionary: AdminApiKeysDictionary;
+  disabled: boolean;
+  loading: boolean;
+  onInvalidate: (payload: { confirmId: string; reason: string }) => void;
+}) {
+  const [invalidationReason, setInvalidationReason] = useState("");
+  const [invalidationConfirm, setInvalidationConfirm] = useState("");
+
+  return (
+    <Stack gap="xs">
+      <TextInput
+        label={dictionary.invalidationReasonLabel}
+        value={invalidationReason}
+        onChange={(event) => setInvalidationReason(event.currentTarget.value)}
+      />
+      <TextInput
+        label={dictionary.invalidationConfirmLabel}
+        value={invalidationConfirm}
+        onChange={(event) => setInvalidationConfirm(event.currentTarget.value)}
+      />
+      <Button
+        color="red"
+        loading={loading}
+        disabled={disabled}
+        onClick={() => onInvalidate({
+          confirmId: invalidationConfirm,
+          reason: invalidationReason,
+        })}
+      >
+        {dictionary.invalidate}
+      </Button>
+    </Stack>
+  );
+});

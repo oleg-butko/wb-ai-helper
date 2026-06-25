@@ -53,3 +53,16 @@ await runCase("marketing home page exposes admin links after admin check", async
   assert.match(homeSource, /\/admin\/ai-providers/);
   assert.match(homeSource, /showMarketingNav=\{false\}/);
 });
+
+await runCase("admin API key filters are debounced and reason inputs are isolated", async () => {
+  const source = await readFile(
+    new URL("../../src/modules/admin/components/admin-extension-api-keys-card.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /setTimeout\(\(\) => \{/);
+  assert.match(source, /}, 2000\)/);
+  assert.match(source, /rightSection=\{isFilterPending \? <Loader size="xs" \/> : null\}/);
+  assert.match(source, /const QuotaControls = memo/);
+  assert.match(source, /const InvalidationControls = memo/);
+});

@@ -1,5 +1,10 @@
 # Changelog
 
+## Admin API-key input responsiveness
+
+- Isolated quota and invalidation reason inputs from the large API-key admin card render path.
+- Added a two-second debounce and spinner for the API-key list filter.
+
 ## API-key copy fallback
 
 - Replaced the API-key page copy button implementation with an explicit clipboard helper and local HTTP fallback.
