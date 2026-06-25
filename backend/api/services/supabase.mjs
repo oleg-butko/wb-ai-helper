@@ -1731,7 +1731,7 @@ export function createApiServices(config = getApiConfig(), overrides = {}) {
 
       const extensionUserResponse = await adminClient
         .from("extension_users")
-        .insert(
+        .upsert(
           {
             user_id: userId,
             email,

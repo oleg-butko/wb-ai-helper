@@ -756,8 +756,8 @@ begin
   update public.ai_provider_profiles
   set is_active = false,
       updated_by_admin_user_id = admin_user_id
-  where is_active = true
-    and id <> profile_id;
+  where ai_provider_profiles.is_active = true
+    and ai_provider_profiles.id <> profile_id;
 
   return query
   update public.ai_provider_profiles
@@ -802,8 +802,8 @@ begin
   update public.ai_prompt_profiles
   set is_active = false,
       updated_by_admin_user_id = admin_user_id
-  where is_active = true
-    and id <> profile_id;
+  where ai_prompt_profiles.is_active = true
+    and ai_prompt_profiles.id <> profile_id;
 
   return query
   update public.ai_prompt_profiles

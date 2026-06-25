@@ -20,3 +20,18 @@ await runCase("full reset removes transactional ownership transfer RPC", async (
     /drop function if exists public\.transfer_workspace_ownership\(uuid, uuid, uuid\) cascade;/i,
   );
 });
+
+await runCase("AI profile activation RPCs qualify is_active column references", async () => {
+  const sqlFiles = [
+    "../../docs/SQL/bootstrap-supabase-initial.sql",
+    "../../docs/SQL/extension-api.sql",
+  ];
+
+  for (const sqlFile of sqlFiles) {
+    const sql = await readFile(new URL(sqlFile, import.meta.url), "utf8");
+
+    assert.match(sql, /where ai_provider_profiles\.is_active = true/i);
+    assert.match(sql, /where ai_prompt_profiles\.is_active = true/i);
+    assert.doesNotMatch(sql, /where is_active = true\s+and id <> profile_id/i);
+  }
+});

@@ -77,3 +77,11 @@ await runCase("admin prompt preview does not force a light background", async ()
   assert.doesNotMatch(source, /bg="gray\.0"/);
   assert.match(source, /Rendered product_details prompt/);
 });
+
+await runCase("extension user persistence is idempotent for repeated user_id calls", async () => {
+  const source = await readFile(new URL("../../api/services/supabase.mjs", import.meta.url), "utf8");
+
+  assert.match(source, /\.from\("extension_users"\)\s*\.upsert\(/);
+  assert.match(source, /onConflict:\s*"user_id"/);
+  assert.match(source, /ignoreDuplicates:\s*true/);
+});
