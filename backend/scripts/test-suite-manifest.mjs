@@ -61,6 +61,7 @@ export const testSuites = {
     children: [
       "api:routes:account",
       "api:routes:admin-ai-provider-profiles",
+      "api:routes:admin-ai-prompt-profiles",
       "api:routes:admin-extension-api-keys",
       "api:routes:extension",
       "api:routes:workspaces",
@@ -75,6 +76,10 @@ export const testSuites = {
   "api:routes:admin-ai-provider-profiles": {
     label: "test:api:routes:admin-ai-provider-profiles",
     ...nodeScript("scripts/run-node-with-warning-filter.mjs", "api/tests/admin-ai-provider-profile-routes.test.mjs"),
+  },
+  "api:routes:admin-ai-prompt-profiles": {
+    label: "test:api:routes:admin-ai-prompt-profiles",
+    ...nodeScript("scripts/run-node-with-warning-filter.mjs", "api/tests/admin-ai-prompt-profile-routes.test.mjs"),
   },
   "api:routes:admin-extension-api-keys": {
     label: "test:api:routes:admin-extension-api-keys",

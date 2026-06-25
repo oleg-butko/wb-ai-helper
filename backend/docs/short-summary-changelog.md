@@ -1,5 +1,11 @@
 # Changelog
 
+## Admin AI prompt profiles
+
+- Added globally active AI prompt profiles with system prompt, product-details template, example parsed JSON, and preview rendering.
+- Added Supabase schema/RPC, Fastify admin routes, Next proxy routes, and `/[locale]/admin/prompts`.
+- Added route coverage for auth, create, preview, unknown placeholders, and activation.
+
 ## Extension API-key validation endpoint
 
 - Added `POST /v1/extension/api-key/check` for non-consuming extension API-key validation.

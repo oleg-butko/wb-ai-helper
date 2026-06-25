@@ -165,6 +165,19 @@ function mapAiProviderProfileSecretRecord(item) {
   };
 }
 
+function mapAiPromptProfileRecord(item) {
+  return {
+    id: item.id,
+    label: item.label,
+    systemPrompt: item.system_prompt,
+    productDetailsTemplate: item.product_details_template,
+    examplePayload: item.example_payload,
+    isActive: Boolean(item.is_active),
+    createdAt: item.created_at,
+    updatedAt: item.updated_at,
+  };
+}
+
 function mapExtensionApiKeyRecord(item) {
   const quotaTotal = Number(item.quota_total ?? 0);
   const quotaUsed = Number(item.quota_used ?? 0);
@@ -1217,6 +1230,125 @@ export function createApiServices(config = getApiConfig(), overrides = {}) {
       }
 
       return data ? mapAiProviderProfileSecretRecord(data) : null;
+    },
+    async listAdminAiPromptProfiles() {
+      const { data, error } = await adminClient
+        .from("ai_prompt_profiles")
+        .select("id, label, system_prompt, product_details_template, example_payload, is_active, created_at, updated_at")
+        .order("is_active", { ascending: false })
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      return (data ?? []).map(mapAiPromptProfileRecord);
+    },
+    async createAdminAiPromptProfile({
+      label,
+      systemPrompt,
+      productDetailsTemplate,
+      examplePayload,
+      adminUserId,
+    }) {
+      const { data, error } = await adminClient
+        .from("ai_prompt_profiles")
+        .insert({
+          label: label.trim(),
+          system_prompt: systemPrompt.trim(),
+          product_details_template: productDetailsTemplate.trim(),
+          example_payload: examplePayload,
+          created_by_admin_user_id: adminUserId,
+          updated_by_admin_user_id: adminUserId,
+        })
+        .select("id, label, system_prompt, product_details_template, example_payload, is_active, created_at, updated_at")
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      return mapAiPromptProfileRecord(data);
+    },
+    async updateAdminAiPromptProfile({
+      profileId,
+      label,
+      systemPrompt,
+      productDetailsTemplate,
+      examplePayload,
+      adminUserId,
+    }) {
+      const patch = {};
+
+      if (label !== undefined) {
+        patch.label = label.trim();
+      }
+
+      if (systemPrompt !== undefined) {
+        patch.system_prompt = systemPrompt.trim();
+      }
+
+      if (productDetailsTemplate !== undefined) {
+        patch.product_details_template = productDetailsTemplate.trim();
+      }
+
+      if (examplePayload !== undefined) {
+        patch.example_payload = examplePayload;
+      }
+
+      if (adminUserId !== undefined) {
+        patch.updated_by_admin_user_id = adminUserId;
+      }
+
+      const { data, error } = await adminClient
+        .from("ai_prompt_profiles")
+        .update(patch)
+        .eq("id", profileId)
+        .select("id, label, system_prompt, product_details_template, example_payload, is_active, created_at, updated_at")
+        .maybeSingle();
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data) {
+        const missingError = new Error("The requested AI prompt profile was not found.");
+        missingError.code = "admin_ai_prompt_profile_not_found";
+        throw missingError;
+      }
+
+      return mapAiPromptProfileRecord(data);
+    },
+    async getAdminAiPromptProfile({ profileId }) {
+      const { data, error } = await adminClient
+        .from("ai_prompt_profiles")
+        .select("id, label, system_prompt, product_details_template, example_payload, is_active, created_at, updated_at")
+        .eq("id", profileId)
+        .maybeSingle();
+
+      if (error) {
+        throw error;
+      }
+
+      return data ? mapAiPromptProfileRecord(data) : null;
+    },
+    async activateAdminAiPromptProfile({ profileId, adminUserId }) {
+      const { data, error } = await adminClient.rpc("activate_ai_prompt_profile", {
+        profile_id: profileId,
+        admin_user_id: adminUserId,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data || data.length === 0) {
+        const missingError = new Error("The requested AI prompt profile was not found.");
+        missingError.code = "admin_ai_prompt_profile_not_found";
+        throw missingError;
+      }
+
+      return mapAiPromptProfileRecord(data[0]);
     },
     async listAdminExtensionApiKeys({ limit = 50 } = {}) {
       const normalizedLimit = Number.isInteger(limit)

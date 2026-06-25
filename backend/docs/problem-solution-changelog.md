@@ -1,5 +1,11 @@
 # Changelog
 
+## Admin AI prompt profiles
+
+Problem: admins need to edit the system prompt and control how parsed extension review JSON becomes the product-details user prompt, with preview before the generation endpoint is connected to real AI output.
+
+Solution: added globally active AI prompt profiles with Supabase schema/RPC, Fastify admin routes, Next proxy routes, `/[locale]/admin/prompts`, template rendering with `{{key}}` placeholders, example JSON validation, and preview output without calling the AI provider.
+
 ## Extension API-key validation endpoint
 
 Problem: the extension popup needs a minimal API-key validity check, but using the review-response endpoint for this would create generation records and consume quota.

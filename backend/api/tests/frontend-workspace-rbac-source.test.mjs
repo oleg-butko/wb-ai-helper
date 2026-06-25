@@ -51,6 +51,7 @@ await runCase("marketing home page exposes admin links after admin check", async
   assert.match(pageSource, /isAdminEmail\(user\.email\)/);
   assert.match(homeSource, /\/admin\/api-keys/);
   assert.match(homeSource, /\/admin\/ai-providers/);
+  assert.match(homeSource, /\/admin\/prompts/);
   assert.match(homeSource, /showMarketingNav=\{false\}/);
 });
 

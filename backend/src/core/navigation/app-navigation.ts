@@ -37,6 +37,11 @@ export function getAppNavigation(
       label: "AI providers",
       href: `/${locale}/admin/ai-providers`,
     });
+    coreItems.push({
+      id: "admin-prompts",
+      label: "Prompts",
+      href: `/${locale}/admin/prompts`,
+    });
   }
 
   const moduleItems = getModuleNavItems("app", locale).map(({ id, label, href }) => ({

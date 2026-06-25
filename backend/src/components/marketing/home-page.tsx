@@ -15,6 +15,7 @@ import {
 import {
   IconChecklist,
   IconKey,
+  IconMessageChatbot,
   IconRobot,
   IconUsers,
 } from "@tabler/icons-react";
@@ -47,6 +48,12 @@ export function HomePage({ dictionary, isAdmin, locale, user }: HomePageProps) {
       title: "AI provider profiles",
       description: "Configure OpenAI-compatible providers, save provider API keys, list available models, and run connection checks.",
       icon: IconRobot,
+    },
+    {
+      href: `/${locale}/admin/prompts`,
+      title: "AI prompts",
+      description: "Edit the active system prompt, product-details template, and preview rendering from parsed extension JSON.",
+      icon: IconMessageChatbot,
     },
     {
       href: `/${locale}/workspace`,

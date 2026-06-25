@@ -1,0 +1,324 @@
+"use client";
+
+import { Alert, Badge, Button, Card, Group, Select, SimpleGrid, Stack, Text, Textarea, TextInput, Title } from "@mantine/core";
+import { useCallback, useEffect, useMemo, useState } from "react";
+
+import type {
+  AdminAiPromptProfileListResponse,
+  AdminAiPromptProfilePreviewResponse,
+  AdminAiPromptProfileResponse,
+} from "@/shared/api/admin-ai-prompt-profiles";
+import {
+  defaultProductDetailsTemplate,
+  defaultPromptExamplePayload,
+  defaultSystemPrompt,
+} from "@/shared/api/admin-ai-prompt-profiles";
+
+type PromptProfile = AdminAiPromptProfileListResponse["profiles"][number];
+
+function isObject(payload: unknown): payload is Record<string, unknown> {
+  return typeof payload === "object" && payload !== null;
+}
+
+function getPayloadMessage(payload: unknown) {
+  return isObject(payload) && typeof payload.message === "string"
+    ? payload.message
+    : null;
+}
+
+function isProfileListResponse(payload: unknown): payload is AdminAiPromptProfileListResponse {
+  return isObject(payload) && Array.isArray(payload.profiles);
+}
+
+function isProfileResponse(payload: unknown): payload is AdminAiPromptProfileResponse {
+  return isObject(payload) && isObject(payload.profile) && typeof payload.profile.id === "string";
+}
+
+function isPreviewResponse(payload: unknown): payload is AdminAiPromptProfilePreviewResponse {
+  return isObject(payload) &&
+    typeof payload.productDetailsPrompt === "string" &&
+    typeof payload.systemPrompt === "string";
+}
+
+function formatJson(payload: unknown) {
+  return JSON.stringify(payload, null, 2);
+}
+
+export function AdminAiPromptProfilesCard() {
+  const [profiles, setProfiles] = useState<PromptProfile[]>([]);
+  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
+  const [label, setLabel] = useState("Default review response prompt");
+  const [systemPrompt, setSystemPrompt] = useState(defaultSystemPrompt);
+  const [productDetailsTemplate, setProductDetailsTemplate] = useState(defaultProductDetailsTemplate);
+  const [exampleJson, setExampleJson] = useState(formatJson(defaultPromptExamplePayload));
+  const [preview, setPreview] = useState<AdminAiPromptProfilePreviewResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const selectedProfile = profiles.find((profile) => profile.id === selectedProfileId) ?? null;
+  const profileOptions = useMemo(
+    () => profiles.map((profile) => ({
+      value: profile.id,
+      label: `${profile.isActive ? "Active — " : ""}${profile.label}`,
+    })),
+    [profiles],
+  );
+
+  function loadProfileIntoEditor(profile: PromptProfile) {
+    setSelectedProfileId(profile.id);
+    setLabel(profile.label);
+    setSystemPrompt(profile.systemPrompt);
+    setProductDetailsTemplate(profile.productDetailsTemplate);
+    setExampleJson(formatJson(profile.examplePayload));
+    setPreview(null);
+  }
+
+  const refreshProfiles = useCallback(async (preferredProfileId?: string) => {
+    const response = await fetch("/api/admin/ai-prompt-profiles", {
+      cache: "no-store",
+    });
+    const payload = (await response.json().catch(() => null)) as AdminAiPromptProfileListResponse | unknown;
+
+    if (!response.ok || !isProfileListResponse(payload)) {
+      throw new Error(getPayloadMessage(payload) ?? "Could not load AI prompt profiles.");
+    }
+
+    setProfiles(payload.profiles);
+
+    const nextProfile =
+      payload.profiles.find((profile) => profile.id === preferredProfileId) ??
+      payload.profiles.find((profile) => profile.id === selectedProfileId) ??
+      payload.profiles.find((profile) => profile.isActive) ??
+      payload.profiles[0];
+
+    if (nextProfile) {
+      loadProfileIntoEditor(nextProfile);
+    }
+  }, [selectedProfileId]);
+
+  useEffect(() => {
+    refreshProfiles().catch((loadError) => {
+      setError(loadError instanceof Error ? loadError.message : "Could not load AI prompt profiles.");
+    });
+  }, [refreshProfiles]);
+
+  function parseExamplePayload() {
+    try {
+      return JSON.parse(exampleJson);
+    } catch {
+      throw new Error("Example JSON is invalid.");
+    }
+  }
+
+  async function createProfile() {
+    setLoading(true);
+    setError(null);
+    setFeedback(null);
+
+    try {
+      const response = await fetch("/api/admin/ai-prompt-profiles", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          label,
+          systemPrompt,
+          productDetailsTemplate,
+          examplePayload: parseExamplePayload(),
+        }),
+      });
+      const payload = (await response.json().catch(() => null)) as AdminAiPromptProfileResponse | unknown;
+
+      if (!response.ok || !isProfileResponse(payload)) {
+        throw new Error(getPayloadMessage(payload) ?? "Could not create AI prompt profile.");
+      }
+
+      setFeedback("AI prompt profile was created.");
+      await refreshProfiles(payload.profile.id);
+    } catch (createError) {
+      setError(createError instanceof Error ? createError.message : "Could not create AI prompt profile.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function saveProfile() {
+    if (!selectedProfileId) {
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setFeedback(null);
+
+    try {
+      const response = await fetch(`/api/admin/ai-prompt-profiles/${encodeURIComponent(selectedProfileId)}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          label,
+          systemPrompt,
+          productDetailsTemplate,
+          examplePayload: parseExamplePayload(),
+        }),
+      });
+      const payload = (await response.json().catch(() => null)) as AdminAiPromptProfileResponse | unknown;
+
+      if (!response.ok || !isProfileResponse(payload)) {
+        throw new Error(getPayloadMessage(payload) ?? "Could not save AI prompt profile.");
+      }
+
+      setFeedback("AI prompt profile was saved.");
+      await refreshProfiles(payload.profile.id);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Could not save AI prompt profile.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function previewProfile() {
+    if (!selectedProfileId) {
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setFeedback(null);
+
+    try {
+      const response = await fetch(`/api/admin/ai-prompt-profiles/${encodeURIComponent(selectedProfileId)}/preview`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          productDetailsTemplate,
+          examplePayload: parseExamplePayload(),
+        }),
+      });
+      const payload = (await response.json().catch(() => null)) as AdminAiPromptProfilePreviewResponse | unknown;
+
+      if (!response.ok || !isPreviewResponse(payload)) {
+        throw new Error(getPayloadMessage(payload) ?? "Could not preview AI prompt profile.");
+      }
+
+      setPreview(payload);
+      setFeedback("Preview was rendered.");
+    } catch (previewError) {
+      setError(previewError instanceof Error ? previewError.message : "Could not preview AI prompt profile.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function activateProfile() {
+    if (!selectedProfileId) {
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setFeedback(null);
+
+    try {
+      const response = await fetch(`/api/admin/ai-prompt-profiles/${encodeURIComponent(selectedProfileId)}/activate`, {
+        method: "POST",
+      });
+      const payload = (await response.json().catch(() => null)) as AdminAiPromptProfileResponse | unknown;
+
+      if (!response.ok || !isProfileResponse(payload)) {
+        throw new Error(getPayloadMessage(payload) ?? "Could not activate AI prompt profile.");
+      }
+
+      setFeedback("AI prompt profile is now active.");
+      await refreshProfiles(payload.profile.id);
+    } catch (activateError) {
+      setError(activateError instanceof Error ? activateError.message : "Could not activate AI prompt profile.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Stack gap="lg">
+      {error ? <Alert color="red">{error}</Alert> : null}
+      {feedback ? <Alert color="green">{feedback}</Alert> : null}
+
+      <Card withBorder radius="lg" p="lg">
+        <Stack gap="md">
+          <Group justify="space-between">
+            <Title order={3}>Prompt profiles</Title>
+            {selectedProfile?.isActive ? <Badge color="green">Active</Badge> : <Badge color="gray">Inactive</Badge>}
+          </Group>
+          <Select
+            label="Select profile"
+            data={profileOptions}
+            value={selectedProfileId}
+            onChange={(value) => {
+              const profile = profiles.find((item) => item.id === value);
+              if (profile) {
+                loadProfileIntoEditor(profile);
+              }
+            }}
+          />
+        </Stack>
+      </Card>
+
+      <SimpleGrid cols={{ base: 1, lg: 2 }} spacing="lg">
+        <Card withBorder radius="lg" p="lg">
+          <Stack gap="md">
+            <Title order={3}>Edit prompt profile</Title>
+            <TextInput label="Label" value={label} onChange={(event) => setLabel(event.currentTarget.value)} />
+            <Textarea
+              autosize
+              minRows={8}
+              label="system_prompt"
+              value={systemPrompt}
+              onChange={(event) => setSystemPrompt(event.currentTarget.value)}
+            />
+            <Textarea
+              autosize
+              minRows={14}
+              label="product_details_template"
+              description="Allowed placeholders: {{name}}, {{product_details}}, {{feedback_reasons}}, {{rating}}, {{product_name}}, {{product_url}}, {{vendor_code_1}}, {{vendor_code_2}}, {{colors}}, {{size}}"
+              value={productDetailsTemplate}
+              onChange={(event) => setProductDetailsTemplate(event.currentTarget.value)}
+            />
+            <Group>
+              <Button loading={loading} onClick={saveProfile} disabled={!selectedProfileId}>Save</Button>
+              <Button variant="light" loading={loading} onClick={createProfile}>Create as new</Button>
+              <Button color="green" loading={loading} onClick={activateProfile} disabled={!selectedProfileId || selectedProfile?.isActive}>Activate</Button>
+            </Group>
+          </Stack>
+        </Card>
+
+        <Card withBorder radius="lg" p="lg">
+          <Stack gap="md">
+            <Title order={3}>Preview</Title>
+            <Textarea
+              autosize
+              minRows={14}
+              label="Example parsed JSON"
+              value={exampleJson}
+              onChange={(event) => setExampleJson(event.currentTarget.value)}
+            />
+            <Button loading={loading} onClick={previewProfile} disabled={!selectedProfileId}>Render preview</Button>
+            {preview ? (
+              <Stack gap="sm">
+                <Text fw={700}>system_prompt</Text>
+                <Card withBorder bg="gray.0">
+                  <Text style={{ whiteSpace: "pre-wrap" }}>{preview.systemPrompt}</Text>
+                </Card>
+                <Text fw={700}>Rendered product_details prompt</Text>
+                <Card withBorder bg="gray.0">
+                  <Text style={{ whiteSpace: "pre-wrap" }}>{preview.productDetailsPrompt}</Text>
+                </Card>
+              </Stack>
+            ) : (
+              <Text c="dimmed">Render a preview to see the final product_details prompt.</Text>
+            )}
+          </Stack>
+        </Card>
+      </SimpleGrid>
+    </Stack>
+  );
+}
