@@ -12,6 +12,7 @@ type AlertKind = 'info' | 'success' | 'error'
 type PopupAlert = {
 	kind: AlertKind
 	message: string
+	createdAt?: string
 }
 
 type HistoryItem = {
@@ -21,6 +22,7 @@ type HistoryItem = {
 }
 
 const historyStorageKey = 'popup_history'
+const popupAlertStorageKey = 'popup_last_alert'
 const requestTimeoutMs = 15_000
 
 function normalizeApiBaseUrl(value: string) {
@@ -40,6 +42,26 @@ async function getHistory() {
 	const history = stored[historyStorageKey]
 
 	return Array.isArray(history) ? (history as HistoryItem[]) : []
+}
+
+function isPopupAlert(payload: unknown): payload is PopupAlert {
+	return (
+		typeof payload === 'object' &&
+		payload !== null &&
+		'kind' in payload &&
+		(payload.kind === 'info' ||
+			payload.kind === 'success' ||
+			payload.kind === 'error') &&
+		'message' in payload &&
+		typeof payload.message === 'string'
+	)
+}
+
+async function getStoredPopupAlert() {
+	const stored = await chrome.storage.local.get(popupAlertStorageKey)
+	const alert = stored[popupAlertStorageKey]
+
+	return isPopupAlert(alert) ? alert : null
 }
 
 async function addHistory(message: string) {
@@ -102,13 +124,14 @@ export default function App() {
 	}, [config?.is_dev_mode])
 
 	useEffect(() => {
-		Promise.all([getExtensionConfig(), getHistory()])
-			.then(([loadedConfig, loadedHistory]) => {
+		Promise.all([getExtensionConfig(), getHistory(), getStoredPopupAlert()])
+			.then(([loadedConfig, loadedHistory, storedAlert]) => {
 				setConfig(loadedConfig)
 				setApiKeyInput(loadedConfig.API_KEY)
 				setApiBaseUrlInput(loadedConfig.API_BASE_URL)
 				setUserIdInput(loadedConfig.user_id)
 				setHistory(loadedHistory)
+				setAlert(storedAlert)
 			})
 			.catch((error: unknown) => {
 				setAlert({
@@ -122,9 +145,52 @@ export default function App() {
 			.finally(() => setIsLoadingConfig(false))
 	}, [])
 
+	useEffect(() => {
+		function handleStorageChange(
+			changes: Record<string, chrome.storage.StorageChange>,
+			areaName: string
+		) {
+			if (areaName !== 'local') {
+				return
+			}
+
+			const alertChange = changes[popupAlertStorageKey]
+			const historyChange = changes[historyStorageKey]
+
+			if (alertChange) {
+				setAlert(isPopupAlert(alertChange.newValue) ? alertChange.newValue : null)
+			}
+
+			if (historyChange && Array.isArray(historyChange.newValue)) {
+				setHistory(historyChange.newValue as HistoryItem[])
+			}
+		}
+
+		chrome.storage.onChanged.addListener(handleStorageChange)
+
+		return () => chrome.storage.onChanged.removeListener(handleStorageChange)
+	}, [])
+
 	async function recordHistory(message: string) {
 		const nextHistory = await addHistory(message)
 		setHistory(nextHistory)
+	}
+
+	async function clearAlert() {
+		setAlert(null)
+		await chrome.storage.local.remove(popupAlertStorageKey)
+	}
+
+	async function copyAlert() {
+		if (!alert?.message) {
+			return
+		}
+
+		await navigator.clipboard.writeText(alert.message)
+		setAlert({
+			kind: 'success',
+			message: 'Alert text was copied to clipboard.'
+		})
 	}
 
 	async function saveApiKey() {
@@ -255,9 +321,12 @@ export default function App() {
 						aria-label="Close alert"
 						className="popup-alert__close"
 						type="button"
-						onClick={() => setAlert(null)}
+						onClick={clearAlert}
 					>
 						×
+					</button>
+					<button className="popup-alert__copy" type="button" onClick={copyAlert}>
+						Copy
 					</button>
 				</section>
 			) : (

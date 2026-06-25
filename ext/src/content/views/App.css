@@ -84,6 +84,104 @@
   margin: 0;
 }
 
+.helper-modal-loading {
+  display: grid;
+  min-height: 18rem;
+  place-items: center;
+  gap: 0.75rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+.helper-modal-loading p {
+  margin: 0;
+  color: #4b5563;
+}
+
+.helper-modal-loading strong {
+  font-size: 1.5rem;
+}
+
+.helper-modal-spinner {
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 0.25rem solid #dbeafe;
+  border-top-color: #2563eb;
+  border-radius: 999px;
+  animation: helper-spin 0.8s linear infinite;
+}
+
+.helper-modal-result,
+.helper-modal-status,
+.helper-modal-diagnostics {
+  margin: 0 1rem 1rem;
+  padding: 0.875rem;
+  border: 1px solid #dbe3ef;
+  border-radius: 0.5rem;
+  background: #f8fafc;
+}
+
+.helper-modal-result h3,
+.helper-modal-diagnostics h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.875rem;
+}
+
+.helper-modal-result p,
+.helper-modal-status p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.helper-modal-status--success {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.helper-modal-status--error {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.helper-modal-diagnostics pre {
+  margin: 0;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font: 0.75rem/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.helper-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 1rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.helper-modal-actions button {
+  min-height: 2.25rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  background: #ffffff;
+  color: #172033;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+
+.helper-modal-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.helper-modal-actions .helper-modal-primary {
+  border-color: #2563eb;
+  background: #2563eb;
+  color: #ffffff;
+}
+
 .helper-fallback-button-wrapper {
   display: flex;
   align-items: center;
@@ -104,4 +202,10 @@
 
 .helper-fallback-button:hover {
   background: #f3f4f6;
+}
+
+@keyframes helper-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }

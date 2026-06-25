@@ -74,8 +74,11 @@
 }
 
 .popup-alert p {
+  flex: 1 1 auto;
   margin: 0;
   font-size: 13px;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .popup-alert--empty {
@@ -112,6 +115,18 @@
   background: rgba(23, 33, 43, 0.08);
   font-size: 18px;
   line-height: 1;
+}
+
+.popup-alert__copy {
+  flex: 0 0 auto;
+  min-height: 24px;
+  padding: 3px 8px;
+  border: 1px solid rgba(23, 33, 43, 0.12);
+  border-radius: 999px;
+  color: #17212b;
+  background: rgba(255, 255, 255, 0.78);
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .popup-card {
