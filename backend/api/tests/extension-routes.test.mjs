@@ -91,6 +91,77 @@ await runCase("POST /v1/extension/review-response rejects missing API key", asyn
   }
 });
 
+await runCase("POST /v1/extension/api-key/check validates a key without consuming quota", async () => {
+  let ensureUserCalled = false;
+  let consumeQuotaCalled = false;
+  const app = buildApiApp({
+    services: createExtensionServices({
+      async ensureExtensionUser() {
+        ensureUserCalled = true;
+        return null;
+      },
+      async consumeExtensionApiQuota() {
+        consumeQuotaCalled = true;
+        return null;
+      },
+    }),
+  });
+
+  try {
+    const response = await app.inject({
+      method: "POST",
+      url: "/v1/extension/api-key/check",
+      headers: {
+        "x-api-key": "test-key",
+      },
+      payload: {
+        user_id: extensionUserId,
+      },
+    });
+    const payload = response.json();
+
+    assert.equal(response.statusCode, 200);
+    assert.equal(payload.ok, true);
+    assert.equal(payload.message, "API key is valid and has remaining quota.");
+    assert.equal(payload.diagnostics.apiKeyId, apiKeyId);
+    assert.equal(payload.diagnostics.quotaRemaining, 7);
+    assert.equal(ensureUserCalled, false);
+    assert.equal(consumeQuotaCalled, false);
+  } finally {
+    await app.close();
+  }
+});
+
+await runCase("POST /v1/extension/api-key/check returns informative auth failures", async () => {
+  const app = buildApiApp({
+    services: createExtensionServices({
+      async resolveExtensionApiKey() {
+        return null;
+      },
+    }),
+  });
+
+  try {
+    const response = await app.inject({
+      method: "POST",
+      url: "/v1/extension/api-key/check",
+      headers: {
+        "x-api-key": "bad-key",
+      },
+      payload: {
+        user_id: extensionUserId,
+      },
+    });
+    const payload = response.json();
+
+    assert.equal(response.statusCode, 401);
+    assert.equal(payload.error, "invalid_api_key");
+    assert.equal(payload.message, "The provided API key was not found.");
+  } finally {
+    await app.close();
+  }
+});
+
 await runCase("POST /v1/extension/review-response rejects invalid request bodies", async () => {
   let apiKeyResolved = false;
   const app = buildApiApp({

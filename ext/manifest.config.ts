@@ -12,6 +12,7 @@ export function createManifest(mode: string) {
 			48: 'public/logo.png'
 		},
 		permissions: ['storage'],
+		host_permissions: ['http://*/*', 'https://*/*'],
 		action: {
 			default_icon: {
 				48: 'public/logo.png'

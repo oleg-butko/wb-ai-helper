@@ -71,3 +71,35 @@ export async function resetExtensionConfig() {
 
 	return config
 }
+
+export async function getExtensionConfig() {
+	const stored = await chrome.storage.sync.get([
+		'API_BASE_URL',
+		'API_KEY',
+		'user_id',
+		'is_dev_mode'
+	])
+
+	if (
+		typeof stored.API_BASE_URL === 'string' &&
+		typeof stored.API_KEY === 'string' &&
+		typeof stored.user_id === 'string'
+	) {
+		return {
+			API_BASE_URL: stored.API_BASE_URL,
+			API_KEY: stored.API_KEY,
+			user_id: stored.user_id,
+			...(stored.is_dev_mode === true ? { is_dev_mode: true as const } : {})
+		}
+	}
+
+	return resetExtensionConfig()
+}
+
+export async function updateExtensionConfig(
+	patch: Partial<Pick<ExtensionConfig, 'API_BASE_URL' | 'API_KEY' | 'user_id'>>
+) {
+	await chrome.storage.sync.set(patch)
+
+	return getExtensionConfig()
+}

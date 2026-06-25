@@ -1,5 +1,11 @@
 # Problem-solution changelog
 
+## Add popup history/options/dev-mode tabs
+
+Problem: The extension popup still showed the CRXJS/Vite demo screen, so users had no place to enter an extension API key, check it, or see recent extension actions. Development-only config controls also needed to stay hidden from normal production users.
+
+Solution: Replaced the demo popup with History and Options tabs for all users, plus a Dev Mode tab only when `is_dev_mode` is present in config. The popup stores config in `chrome.storage.sync`, stores recent action history in `chrome.storage.local`, checks API keys with a 15-second timeout and spinner, and shows dismissible alert messages from extension/API actions.
+
 ## Recover AI answer button when drawer button markup changes
 
 Problem: Wildberries changed the drawer action-button structure, so the old positional selector for the built-in `Сгенерировать` button returned `null` and the extension stopped adding `AI ответ`.

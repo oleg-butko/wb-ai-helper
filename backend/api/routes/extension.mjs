@@ -46,6 +46,27 @@ async function safeRecordExtensionGenerationEvent(request, payload) {
 }
 
 export async function registerExtensionRoutes(app) {
+  app.post("/v1/extension/api-key/check", async (request, reply) => {
+    const authentication = await resolveExtensionApiKeyRequest(request, reply);
+
+    if (!authentication.ok) {
+      return authentication.response;
+    }
+
+    return reply.send({
+      ok: true,
+      message: "API key is valid and has remaining quota.",
+      diagnostics: {
+        backend: "fastify",
+        backendVersion,
+        apiKeyId: authentication.apiKeyRecord.id,
+        quotaTotal: authentication.apiKeyRecord.quotaTotal,
+        quotaUsed: authentication.apiKeyRecord.quotaUsed,
+        quotaRemaining: authentication.apiKeyRecord.quotaRemaining,
+      },
+    });
+  });
+
   app.post("/v1/extension/review-response", async (request, reply) => {
     let body;
 

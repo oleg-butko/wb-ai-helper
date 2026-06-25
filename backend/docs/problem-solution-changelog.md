@@ -1,5 +1,11 @@
 # Changelog
 
+## Extension API-key validation endpoint
+
+Problem: the extension popup needs a minimal API-key validity check, but using the review-response endpoint for this would create generation records and consume quota.
+
+Solution: added `POST /v1/extension/api-key/check`, which validates `x-api-key`, invalidation status, and remaining quota without creating an extension user or consuming quota. The popup uses this endpoint for its Options tab check button.
+
 ## Admin API-key input responsiveness
 
 Problem: typing in unrelated admin API-key inputs, such as invalidation reason, could feel laggy because those input states lived in the same large React component that also rendered API-key tables, history, users, requests, and errors. The list filter also recomputed immediately on every keystroke.

@@ -1,5 +1,10 @@
 # Changelog
 
+## Extension API-key validation endpoint
+
+- Added `POST /v1/extension/api-key/check` for non-consuming extension API-key validation.
+- Added route coverage that validation does not create users or consume quota.
+
 ## Admin API-key input responsiveness
 
 - Isolated quota and invalidation reason inputs from the large API-key admin card render path.
