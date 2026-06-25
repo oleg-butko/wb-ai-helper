@@ -47,3 +47,4 @@ scripts/admin-utils/reset_data/last-run.json
 scripts/admin-utils/data_snapshots/last-run.json
 scripts/admin-utils/data_snapshots/snapshots/
 FarMenu.ini
+_files/
