@@ -1,5 +1,10 @@
 # Changelog
 
+## API-key copy fallback
+
+- Replaced the API-key page copy button implementation with an explicit clipboard helper and local HTTP fallback.
+- Added visible copied/error feedback when copying the one-time raw extension API key.
+
 ## Admin landing and frontend dev env
 
 - Made `dev:web` load `.env.api.local` before `next dev` so server-only Supabase admin env is available to the frontend server.

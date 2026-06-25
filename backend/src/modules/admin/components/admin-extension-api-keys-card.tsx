@@ -1,6 +1,6 @@
 "use client";
 
-import { Alert, Badge, Button, Card, CopyButton, Group, NumberInput, Select, Stack, Table, Text, TextInput, Textarea, Title } from "@mantine/core";
+import { Alert, Badge, Button, Card, Group, NumberInput, Select, Stack, Table, Text, TextInput, Textarea, Title } from "@mantine/core";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type {
@@ -35,6 +35,38 @@ function formatMessage(template: string, values: Record<string, string | number>
     (message, [key, value]) => message.replaceAll(`{${key}}`, String(value)),
     template,
   );
+}
+
+async function copyTextToClipboard(value: string) {
+  if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(value);
+      return true;
+    } catch {
+      // Fall back for non-secure origins such as local HTTP hostnames.
+    }
+  }
+
+  if (typeof document === "undefined") {
+    return false;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = value;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.top = "-1000px";
+  textarea.style.left = "-1000px";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+
+  try {
+    return document.execCommand("copy");
+  } finally {
+    document.body.removeChild(textarea);
+  }
 }
 
 type AdminExtensionApiKeysCardProps = {
@@ -265,6 +297,22 @@ export function AdminExtensionApiKeysCard({ dictionary }: AdminExtensionApiKeysC
     }
   }
 
+  async function copyCreatedApiKey() {
+    if (!createdRawKey) {
+      return;
+    }
+
+    setError(null);
+    const copied = await copyTextToClipboard(createdRawKey);
+
+    if (copied) {
+      setFeedback(dictionary.copied);
+      return;
+    }
+
+    setError("Could not copy API key. Select it manually and copy it from the page.");
+  }
+
   return (
     <Stack gap="lg">
       {error ? <Alert color="red">{error}</Alert> : null}
@@ -275,13 +323,9 @@ export function AdminExtensionApiKeysCard({ dictionary }: AdminExtensionApiKeysC
             <Text>
               {dictionary.rawApiKeyLabel}: <code>{createdRawKey}</code>
             </Text>
-            <CopyButton value={createdRawKey}>
-              {({ copied, copy }) => (
-                <Button size="xs" onClick={copy}>
-                  {copied ? dictionary.copied : dictionary.copy}
-                </Button>
-              )}
-            </CopyButton>
+            <Button size="xs" onClick={copyCreatedApiKey}>
+              {dictionary.copy}
+            </Button>
           </Group>
         </Alert>
       ) : null}

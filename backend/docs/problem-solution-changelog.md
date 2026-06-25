@@ -1,5 +1,11 @@
 # Changelog
 
+## API-key copy fallback
+
+Problem: the admin API-key page showed the one-time raw extension API key, but the Copy button could fail on local HTTP hostnames where the browser Clipboard API is unavailable or restricted.
+
+Solution: replaced the implicit Mantine copy helper with an explicit copy handler that first tries `navigator.clipboard.writeText(...)`, then falls back to a temporary textarea and `document.execCommand("copy")`, with visible success or failure feedback.
+
 ## Admin landing and frontend dev env
 
 Problem: after signing in as an admin, the Next frontend could throw because `SUPABASE_SERVICE_ROLE_KEY` existed in `.env.api.local` but `next dev` did not load that file. The root layout also emitted a React script-tag warning, and the home page still showed SaaS marketing sections instead of admin entry points.
