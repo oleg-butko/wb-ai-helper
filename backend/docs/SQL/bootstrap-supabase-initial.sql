@@ -895,10 +895,10 @@ begin
   return query
   with updated_key as (
     update public.extension_api_keys
-    set quota_used = quota_used + p_amount
-    where id = p_api_key_id
-      and invalidated_at is null
-      and quota_used + p_amount <= quota_total
+    set quota_used = extension_api_keys.quota_used + p_amount
+    where extension_api_keys.id = p_api_key_id
+      and extension_api_keys.invalidated_at is null
+      and extension_api_keys.quota_used + p_amount <= extension_api_keys.quota_total
     returning id, extension_api_keys.quota_total, extension_api_keys.quota_used
   ),
   inserted_event as (
@@ -955,10 +955,10 @@ begin
   return query
   with updated_key as (
     update public.extension_api_keys
-    set quota_total = quota_total + p_delta
-    where id = p_api_key_id
-      and quota_total + p_delta >= quota_used
-      and quota_total + p_delta >= 0
+    set quota_total = extension_api_keys.quota_total + p_delta
+    where extension_api_keys.id = p_api_key_id
+      and extension_api_keys.quota_total + p_delta >= extension_api_keys.quota_used
+      and extension_api_keys.quota_total + p_delta >= 0
     returning
       id,
       extension_api_keys.label,
