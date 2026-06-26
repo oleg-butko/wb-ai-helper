@@ -336,7 +336,7 @@ export default function App() {
 			)}
 
 			{activeTab === 'history' ? (
-				<section className="popup-card">
+				<section className="popup-card popup-card--history">
 					<div className="popup-section-header">
 						<h2>History</h2>
 						<span>{history.length} items</span>

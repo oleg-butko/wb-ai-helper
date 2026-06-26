@@ -1,8 +1,11 @@
 .popup-shell {
   box-sizing: border-box;
+  display: flex;
+  height: 560px;
   width: 420px;
-  min-height: 560px;
+  flex-direction: column;
   padding: 16px;
+  overflow: hidden;
   color: #17212b;
   background:
     radial-gradient(circle at 10% 0%, rgba(91, 141, 239, 0.18), transparent 32%),
@@ -137,6 +140,13 @@
   box-shadow: 0 16px 36px rgba(23, 33, 43, 0.1);
 }
 
+.popup-card--history {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
 .popup-card--center {
   display: grid;
   min-height: 200px;
@@ -144,6 +154,7 @@
 }
 
 .popup-section-header {
+  flex: 0 0 auto;
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -224,11 +235,13 @@
 
 .history-list {
   display: grid;
-  max-height: 340px;
+  min-height: 0;
+  flex: 1 1 auto;
   gap: 10px;
   margin: 0;
   padding: 0;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   list-style: none;
 }
 
@@ -248,6 +261,7 @@
 
 .history-list span {
   font-size: 13px;
+  overflow-wrap: anywhere;
 }
 
 .spinner {
