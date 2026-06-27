@@ -12,7 +12,10 @@ export function createManifest(mode: string) {
 			48: 'public/logo.png'
 		},
 		permissions: ['storage'],
-		host_permissions: ['http://*/*', 'https://*/*'],
+		host_permissions: [
+			'https://soberly-brave-rabbitfish.cloudpub.ru/*/*',
+			'https://seller.wildberries.ru/feedbacks/feedbacks-tab/not-answered/*/*'
+		],
 		action: {
 			default_icon: {
 				48: 'public/logo.png'
