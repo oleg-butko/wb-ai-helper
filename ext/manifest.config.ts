@@ -31,7 +31,7 @@ export function createManifest(mode: string) {
 				js: ['src/content/main.tsx'],
 				all_frames: false,
 				matches: [
-					'https://seller.wildberries.ru/feedbacks/feedbacks-tab/*'
+					'https://seller.wildberries.ru/feedbacks/feedbacks-tab/not-answered/*'
 				],
 				world: 'ISOLATED' // 'MAIN'
 				// run_at: 'document_idle'
