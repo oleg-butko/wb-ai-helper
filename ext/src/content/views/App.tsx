@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { getExtensionConfig } from '@/config/extensionConfig'
 import { waitForElement } from '../utils/waitForElement'
 import './App.css'
 
 const helperButtonId = 'crxjs-helper-button'
+const helperPageAlertHostId = 'crxjs-helper-page-alert-host'
 const helperButtonText = '✨ AI-ответ'
 const helperButtonLoadingText = 'Генерируем...'
 const helperButtonDoneText = 'Готово ✓'
@@ -12,6 +14,10 @@ const popupHistoryStorageKey = 'popup_history'
 
 type HelperButtonWarning = {
 	title: string
+	message: string
+}
+
+type HelperPageAlert = {
 	message: string
 }
 
@@ -408,6 +414,23 @@ function removeHelperButton() {
 	document.getElementById(helperButtonId)?.remove()
 }
 
+function ensureHelperPageAlertHost(buttonsRoot: HTMLElement) {
+	const existingHost = document.getElementById(helperPageAlertHostId)
+
+	if (existingHost) {
+		return existingHost
+	}
+
+	const host = document.createElement('div')
+	host.id = helperPageAlertHostId
+	host.className = 'helper-page-alert-host'
+
+	const controlWrapper = buttonsRoot.parentElement
+	controlWrapper?.parentElement?.insertBefore(host, controlWrapper)
+
+	return host
+}
+
 function getHelperButtonLabel(button: HTMLButtonElement) {
 	const spans = Array.from(button.querySelectorAll('span'))
 
@@ -528,12 +551,15 @@ function isDrawerOpened(portal: HTMLElement) {
 function syncHelperButton(
 	portal: HTMLElement,
 	onHelperClick: () => void,
-	onWarning: (warning: HelperButtonWarning) => void
+	onWarning: (warning: HelperButtonWarning) => void,
+	onPageAlertHost: (host: HTMLElement | null) => void
 ) {
 	const buttonsRoot = document.querySelector<HTMLElement>(buttonsRootSelector)
 
 	if (!buttonsRoot) {
 		removeHelperButton()
+		document.getElementById(helperPageAlertHostId)?.remove()
+		onPageAlertHost(null)
 		if (!isDrawerOpened(portal)) {
 			return
 		}
@@ -545,6 +571,8 @@ function syncHelperButton(
 		})
 		return
 	}
+
+	onPageAlertHost(ensureHelperPageAlertHost(buttonsRoot))
 
 	if (document.getElementById(helperButtonId)) {
 		return
@@ -592,6 +620,10 @@ function App() {
 	const [generationSeconds, setGenerationSeconds] = useState(0)
 	const [helperButtonWarning, setHelperButtonWarning] =
 		useState<HelperButtonWarning | null>(null)
+	const [helperPageAlert, setHelperPageAlert] =
+		useState<HelperPageAlert | null>(null)
+	const [helperPageAlertHost, setHelperPageAlertHost] =
+		useState<HTMLElement | null>(null)
 
 	useEffect(() => {
 		if (generationStatus !== 'loading' || generationStartedAt === null) {
@@ -619,9 +651,22 @@ function App() {
 		setHelperButtonState('idle')
 	}
 
+	function showPageAlert(message: string) {
+		setHelperPageAlert({ message })
+	}
+
+	async function copyPageAlertMessage() {
+		if (!helperPageAlert?.message) {
+			return
+		}
+
+		await navigator.clipboard.writeText(helperPageAlert.message)
+	}
+
 	async function sendGeneration(review: ParsedInfo) {
 		const startedAt = Date.now()
 
+		setHelperPageAlert(null)
 		setHelperButtonState('loading')
 		setGenerationStatus('loading')
 		setGenerationText('')
@@ -641,6 +686,7 @@ function App() {
 			setGenerationSeconds(seconds)
 			setGenerationStartedAt(null)
 			setHelperButtonState('done')
+			setHelperPageAlert(null)
 
 			return result
 		} catch (error: unknown) {
@@ -659,6 +705,7 @@ function App() {
 			setGenerationStartedAt(null)
 			setHelperButtonState('idle')
 			await savePopupAlert(message)
+			showPageAlert(message)
 
 			throw error
 		}
@@ -697,6 +744,7 @@ function App() {
 			setGenerationMessage(message)
 			setHelperButtonState('idle')
 			await savePopupAlert(message)
+			showPageAlert(message)
 		}
 	}
 
@@ -730,10 +778,12 @@ function App() {
 								return
 							}
 
+							setHelperPageAlert(null)
 							setHelperButtonState('loading')
 							const result = await requestGeneration(parsed)
 							insertGeneratedText(result.text)
 							setHelperButtonState('done')
+							setHelperPageAlert(null)
 							await addPopupHistory(
 								'Generated response was inserted without dev modal.'
 							)
@@ -746,6 +796,7 @@ function App() {
 										: 'Generation request failed.'
 							setHelperButtonState('idle')
 							await savePopupAlert(message)
+							showPageAlert(message)
 						}
 					})()
 				}
@@ -753,11 +804,23 @@ function App() {
 				const handleWarning = (warning: HelperButtonWarning) => {
 					setHelperButtonWarning((currentWarning) => currentWarning ?? warning)
 				}
+				const handlePageAlertHost = (host: HTMLElement | null) => {
+					setHelperPageAlertHost(host)
+
+					if (!host) {
+						setHelperPageAlert(null)
+					}
+				}
 
 				// Now you can observe inside this portal if drawer content appears later.
 				const observer = new MutationObserver(() => {
 					console.log('[CRXJS] Portal content changed')
-					syncHelperButton(portal, handleHelperClick, handleWarning)
+					syncHelperButton(
+						portal,
+						handleHelperClick,
+						handleWarning,
+						handlePageAlertHost
+					)
 				})
 
 				observer.observe(portal, {
@@ -765,11 +828,17 @@ function App() {
 					subtree: true
 				})
 
-				syncHelperButton(portal, handleHelperClick, handleWarning)
+				syncHelperButton(
+					portal,
+					handleHelperClick,
+					handleWarning,
+					handlePageAlertHost
+				)
 
 				abortController.signal.addEventListener('abort', () => {
 					observer.disconnect()
 					removeHelperButton()
+					document.getElementById(helperPageAlertHostId)?.remove()
 				})
 			} catch (error) {
 				if (
@@ -791,6 +860,41 @@ function App() {
 
 	return (
 		<>
+			{helperPageAlert && helperPageAlertHost
+				? createPortal(
+						<div className='helper-page-alert' role='alert'>
+							<button
+								type='button'
+								className='helper-page-alert-close'
+								aria-label='Close alert'
+								onClick={() => setHelperPageAlert(null)}>
+								×
+							</button>
+							<div className='helper-page-alert-content'>
+								<strong>AI response error</strong>
+								<p>{helperPageAlert.message}</p>
+							</div>
+							<div className='helper-page-alert-actions'>
+								<button
+									type='button'
+									className='helper-page-alert-copy'
+									onClick={() => {
+										void copyPageAlertMessage()
+									}}>
+									Copy
+								</button>
+								<button
+									type='button'
+									className='helper-page-alert-ok'
+									onClick={() => setHelperPageAlert(null)}>
+									Ok
+								</button>
+							</div>
+						</div>,
+						helperPageAlertHost
+					)
+				: null}
+
 			{parsedInfo && (
 				<div
 					className='helper-modal-backdrop'
