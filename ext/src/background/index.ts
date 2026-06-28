@@ -46,7 +46,19 @@ const pendingSellerFeedbackTabsReloadStorageKey =
 
 async function resetConfig() {
 	const config = await resetExtensionConfig()
-	console.info('[wb-ai-helper] Extension config reset', config)
+	await chrome.storage.local.set({
+		[pendingSellerFeedbackTabsReloadStorageKey]: true
+	})
+	console.info('[wb-ai-helper] Extension config reset', {
+		config,
+		nextStep: 'Reloading extension before reloading seller feedback tabs.'
+	})
+	chrome.runtime.reload()
+}
+
+async function initializeConfig() {
+	const config = await resetExtensionConfig()
+	console.info('[wb-ai-helper] Extension config initialized', config)
 }
 
 workerGlobal.resetConfig = resetConfig
@@ -247,7 +259,7 @@ chrome.runtime.onInstalled.addListener((details) => {
 		return
 	}
 
-	resetConfig().catch((error: unknown) => {
+	initializeConfig().catch((error: unknown) => {
 		console.error('[wb-ai-helper] Failed to initialize extension config', error)
 	})
 })
