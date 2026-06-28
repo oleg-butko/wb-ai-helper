@@ -90,6 +90,23 @@ function getApiMessage(payload: unknown) {
 	return null
 }
 
+function getQuotaRemaining(payload: unknown) {
+	if (
+		typeof payload !== 'object' ||
+		payload === null ||
+		!('diagnostics' in payload) ||
+		typeof payload.diagnostics !== 'object' ||
+		payload.diagnostics === null ||
+		!('quotaRemaining' in payload.diagnostics) ||
+		typeof payload.diagnostics.quotaRemaining !== 'number' ||
+		!Number.isFinite(payload.diagnostics.quotaRemaining)
+	) {
+		return null
+	}
+
+	return payload.diagnostics.quotaRemaining
+}
+
 async function postWithTimeout(url: string, init: RequestInit) {
 	const controller = new AbortController()
 	const timeout = window.setTimeout(() => controller.abort(), requestTimeoutMs)
@@ -285,11 +302,18 @@ export default function App() {
 				return
 			}
 
+			const quotaRemaining = getQuotaRemaining(payload)
+			const successMessage =
+				quotaRemaining === null
+					? tr('apiKeyValidWithUnknownQuota')
+					: tr('apiKeyValidWithQuota', { count: quotaRemaining })
 			const nextConfig = await updateExtensionConfig({ API_KEY: apiKey })
 			setConfig(nextConfig)
 			setApiKeyInput(nextConfig.API_KEY)
-			setAlert({ kind: 'success', message })
-			await recordHistory(tr('apiKeyCheckSucceededWithMessage', { message }))
+			setAlert({ kind: 'success', message: successMessage })
+			await recordHistory(
+				tr('apiKeyCheckSucceededWithMessage', { message: successMessage })
+			)
 		} catch (error: unknown) {
 			const message =
 				error instanceof DOMException && error.name === 'AbortError'

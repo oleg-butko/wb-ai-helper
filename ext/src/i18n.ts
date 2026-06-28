@@ -17,6 +17,10 @@ const translations = {
 		apiKeyEmpty: 'Введите API ключ перед проверкой.',
 		apiKeySaved: 'API ключ сохранён.',
 		apiKeyUpdatedHistory: 'API ключ обновлён в настройках popup.',
+		apiKeyValidWithQuota:
+			'API ключ действителен. Осталось генераций: {count}.',
+		apiKeyValidWithUnknownQuota:
+			'API ключ действителен. Осталось генераций: неизвестно.',
 		apiRespondedWithStatus: 'API ответил HTTP {status}.',
 		answerTextareaMissing: 'Поле ответа не найдено в drawer.',
 		checkApiKey: 'Проверить API ключ',
@@ -92,6 +96,9 @@ const translations = {
 		apiKeyEmpty: 'Enter API key before checking it.',
 		apiKeySaved: 'API key was saved.',
 		apiKeyUpdatedHistory: 'API key was updated in popup options.',
+		apiKeyValidWithQuota: 'API key is valid. Generations left: {count}.',
+		apiKeyValidWithUnknownQuota:
+			'API key is valid. Generations left: unknown.',
 		apiRespondedWithStatus: 'API responded with HTTP {status}.',
 		answerTextareaMissing: 'Answer textarea was not found in the drawer.',
 		checkApiKey: 'Check API key',
