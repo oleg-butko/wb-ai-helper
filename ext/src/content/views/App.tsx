@@ -587,18 +587,13 @@ function syncHelperButton(
 	const buttonsRoot = document.querySelector<HTMLElement>(buttonsRootSelector)
 
 	if (!buttonsRoot) {
-		removeHelperButton()
-		document.getElementById(helperPageAlertHostId)?.remove()
-		onPageAlertHost(null)
 		if (!isDrawerOpened(portal)) {
+			removeHelperButton()
+			document.getElementById(helperPageAlertHostId)?.remove()
+			onPageAlertHost(null)
 			return
 		}
 
-		onWarning({
-			title: `${helperButtonText} не добавлен`,
-			message:
-				'Расширение не нашло блок кнопок в открытом отзыве. Вероятно, Wildberries изменил HTML страницы, и расширение нужно обновить.'
-		})
 		return
 	}
 
