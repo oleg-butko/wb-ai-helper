@@ -13,7 +13,7 @@ export type ExtensionConfig = {
 }
 
 const developApiBaseUrl = 'http://localhost:8181'
-const productionApiBaseUrl = ''
+const productionApiBaseUrl = 'https://soberly-brave-rabbitfish.cloudpub.ru'
 
 function generateUuidV7() {
 	const bytes = new Uint8Array(16)
