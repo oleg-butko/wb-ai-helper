@@ -11,6 +11,9 @@ const helperButtonLoadingText = 'Генерируем...'
 const helperButtonDoneText = 'Готово ✓'
 const popupAlertStorageKey = 'popup_last_alert'
 const popupHistoryStorageKey = 'popup_history'
+const portalMutationBurstLimit = 250
+const portalMutationBurstWindowMs = 2_000
+const portalMutationPauseMs = 1_000
 
 type HelperButtonWarning = {
 	title: string
@@ -414,6 +417,33 @@ function removeHelperButton() {
 	document.getElementById(helperButtonId)?.remove()
 }
 
+function isHelperOwnedNode(node: Node) {
+	const element =
+		node instanceof Element
+			? node
+			: node.parentElement instanceof Element
+				? node.parentElement
+				: null
+
+	return Boolean(
+		element?.closest(
+			`#${helperButtonId}, #${helperPageAlertHostId}, .helper-page-alert`
+		)
+	)
+}
+
+function hasNonHelperMutation(mutations: MutationRecord[]) {
+	return mutations.some((mutation) => {
+		if (!isHelperOwnedNode(mutation.target)) {
+			return true
+		}
+
+		return [...mutation.addedNodes, ...mutation.removedNodes].some(
+			(node) => !isHelperOwnedNode(node)
+		)
+	})
+}
+
 function ensureHelperPageAlertHost(buttonsRoot: HTMLElement) {
 	const existingHost = document.getElementById(helperPageAlertHostId)
 
@@ -811,16 +841,68 @@ function App() {
 						setHelperPageAlert(null)
 					}
 				}
+				let syncAnimationFrame: number | null = null
+				let resumeObserverTimeout: number | null = null
+				let mutationWindowStartedAt = Date.now()
+				let mutationCountInWindow = 0
+				let isObserverPaused = false
 
-				// Now you can observe inside this portal if drawer content appears later.
-				const observer = new MutationObserver(() => {
-					console.log('[CRXJS] Portal content changed')
+				const sync = () => {
 					syncHelperButton(
 						portal,
 						handleHelperClick,
 						handleWarning,
 						handlePageAlertHost
 					)
+				}
+
+				const scheduleSync = () => {
+					if (syncAnimationFrame !== null) {
+						return
+					}
+
+					syncAnimationFrame = window.requestAnimationFrame(() => {
+						syncAnimationFrame = null
+						sync()
+					})
+				}
+
+				// Now you can observe inside this portal if drawer content appears later.
+				const observer = new MutationObserver((mutations) => {
+					if (isObserverPaused || !hasNonHelperMutation(mutations)) {
+						return
+					}
+
+					const now = Date.now()
+
+					if (now - mutationWindowStartedAt > portalMutationBurstWindowMs) {
+						mutationWindowStartedAt = now
+						mutationCountInWindow = 0
+					}
+
+					mutationCountInWindow += mutations.length
+
+					if (mutationCountInWindow > portalMutationBurstLimit) {
+						isObserverPaused = true
+						console.warn(
+							'[CRXJS] Portal mutation burst detected; pausing helper sync briefly',
+							{
+								mutationCountInWindow,
+								portalMutationBurstWindowMs,
+								portalMutationPauseMs
+							}
+						)
+						resumeObserverTimeout = window.setTimeout(() => {
+							resumeObserverTimeout = null
+							isObserverPaused = false
+							mutationWindowStartedAt = Date.now()
+							mutationCountInWindow = 0
+							scheduleSync()
+						}, portalMutationPauseMs)
+						return
+					}
+
+					scheduleSync()
 				})
 
 				observer.observe(portal, {
@@ -828,15 +910,16 @@ function App() {
 					subtree: true
 				})
 
-				syncHelperButton(
-					portal,
-					handleHelperClick,
-					handleWarning,
-					handlePageAlertHost
-				)
+				sync()
 
 				abortController.signal.addEventListener('abort', () => {
 					observer.disconnect()
+					if (syncAnimationFrame !== null) {
+						window.cancelAnimationFrame(syncAnimationFrame)
+					}
+					if (resumeObserverTimeout !== null) {
+						window.clearTimeout(resumeObserverTimeout)
+					}
 					removeHelperButton()
 					document.getElementById(helperPageAlertHostId)?.remove()
 				})
