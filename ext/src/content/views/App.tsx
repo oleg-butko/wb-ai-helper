@@ -12,7 +12,6 @@ import './App.css'
 const helperButtonId = 'crxjs-helper-button'
 const helperPageAlertHostId = 'crxjs-helper-page-alert-host'
 const helperButtonLoadingText = 'Генерируем...'
-const helperButtonDoneText = 'Готово ✓'
 const popupAlertStorageKey = 'popup_last_alert'
 const popupHistoryStorageKey = 'popup_history'
 const portalMutationBurstLimit = 250
@@ -518,11 +517,6 @@ function setHelperButtonState(state: HelperButtonState) {
 
 	if (state === 'loading') {
 		setHelperButtonLabel(button, helperButtonLoadingText)
-		return
-	}
-
-	if (state === 'done') {
-		setHelperButtonLabel(button, helperButtonDoneText)
 		return
 	}
 

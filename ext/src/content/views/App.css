@@ -376,6 +376,7 @@
 
 .crxjs-ai-reply-button-label {
   color: #ffffff;
+  font: inherit;
   white-space: nowrap;
 }
 
@@ -389,7 +390,7 @@
   border: 1px solid rgb(255 255 255 / 0.58);
   border-radius: 6px;
   background: rgb(255 255 255 / 0.92);
-  color: #8a34ea;
+  color: #9a41fe;
   font-family: "Arial Narrow", "Roboto Condensed", "Segoe UI", sans-serif;
   font-size: 0.6875rem;
   font-stretch: condensed;

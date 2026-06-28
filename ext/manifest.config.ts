@@ -36,6 +36,12 @@ export function createManifest(mode: string) {
 				world: 'ISOLATED' // 'MAIN'
 				// run_at: 'document_idle'
 			}
+		],
+		web_accessible_resources: [
+			{
+				resources: ['button1.svg'],
+				matches: ['https://seller.wildberries.ru/*']
+			}
 		]
 	})
 }
