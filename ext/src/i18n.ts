@@ -5,7 +5,8 @@ export const defaultExtensionLanguage: ExtensionLanguage = 'ru'
 const translations = {
 	ru: {
 		alertCopied: 'Текст сообщения скопирован в буфер обмена.',
-		alertEmpty: 'Сообщения от API и действия расширения будут показаны здесь.',
+		alertEmpty:
+			'Сообщения от API и действия расширения будут показаны здесь.',
 		apiAccess: 'Доступ к API',
 		apiBaseUrlEmpty:
 			'API base URL пустой. Укажите его в Dev Mode или настройках расширения.',
@@ -21,8 +22,8 @@ const translations = {
 			'API ключ действителен. Осталось генераций: {count}.',
 		apiKeyValidWithUnknownQuota:
 			'API ключ действителен. Осталось генераций: неизвестно.',
-		apiRespondedWithStatus: 'API ответил HTTP {status}.',
-		answerTextareaMissing: 'Поле ответа не найдено в drawer.',
+		apiRespondedWithStatus: 'API ответил {status}.',
+		answerTextareaMissing: 'Поле ответа не найдено.',
 		checkApiKey: 'Проверить API ключ',
 		checking: 'Проверяем…',
 		checkingApiKey: 'Проверяем API ключ. Таймаут — 15 секунд.',
@@ -36,7 +37,7 @@ const translations = {
 		devConfigUpdatedHistory: 'Dev настройки обновлены из popup.',
 		devMode: 'Dev Mode',
 		diagnostics: 'Диагностика',
-		extensionAssistant: 'Ассистент расширения',
+		extensionAssistant: 'ИИ помощник',
 		generatedResponse: 'Сгенерированный ответ',
 		generatedTextInserted: 'Сгенерированный текст вставлен в поле ответа.',
 		generationFailed: 'Генерация не удалась.',
@@ -65,7 +66,7 @@ const translations = {
 		noDiagnostics: 'Диагностика не вернулась.',
 		noGeneratedText: 'Нет сгенерированного текста для вставки.',
 		noHistory: 'Действий расширения пока нет.',
-		ok: 'Ok',
+		ok: 'Ок',
 		options: 'Настройки',
 		save: 'Сохранить',
 		saveDevConfig: 'Сохранить Dev настройки',
@@ -76,11 +77,12 @@ const translations = {
 			'API_BASE_URL пустой. Откройте popup расширения и укажите его в Dev Mode.',
 		emptyApiKeyBackground:
 			'API ключ пустой. Откройте popup расширения и введите API ключ в настройках.',
-		warningFallbackButtonTitle: '✨ AI-ответ добавлен в резервном режиме',
+		warningFallbackButtonTitle:
+			'Кнопка AI-ответ добавлена в резервном режиме',
 		warningGenerateButtonMissing:
-			'Расширение не нашло встроенную кнопку «Сгенерировать» по ожидаемой структуре страницы. Кнопка «✨ AI-ответ» добавлена с простым стилем, но расширение нужно обновить под новый HTML Wildberries.',
+			'Расширение не нашло встроенную кнопку «Сгенерировать» по ожидаемой структуре страницы. Кнопка «AI-ответ» добавлена с простым стилем, но расширение нужно обновить под новый HTML Wildberries.',
 		warningGenerateWrapperMissing:
-			'Расширение нашло кнопку «Сгенерировать», но не смогло определить ее контейнер. Кнопка «✨ AI-ответ» добавлена с простым стилем, но расширение нужно обновить под новый HTML Wildberries.'
+			'Расширение нашло кнопку «Сгенерировать», но не смогло определить ее контейнер. Кнопка «AI-ответ» добавлена с простым стилем, но расширение нужно обновить под новый HTML Wildberries.'
 	},
 	en: {
 		alertCopied: 'Alert text was copied to clipboard.',
@@ -100,7 +102,7 @@ const translations = {
 		apiKeyValidWithUnknownQuota:
 			'API key is valid. Generations left: unknown.',
 		apiRespondedWithStatus: 'API responded with HTTP {status}.',
-		answerTextareaMissing: 'Answer textarea was not found in the drawer.',
+		answerTextareaMissing: 'Answer textarea was not found.',
 		checkApiKey: 'Check API key',
 		checking: 'Checking…',
 		checkingApiKey: 'Checking API key. Timeout is 15 seconds.',
@@ -114,9 +116,10 @@ const translations = {
 		devConfigUpdatedHistory: 'Dev config was updated from popup.',
 		devMode: 'Dev Mode',
 		diagnostics: 'Diagnostics',
-		extensionAssistant: 'Extension assistant',
+		extensionAssistant: 'AI assistant',
 		generatedResponse: 'Generated response',
-		generatedTextInserted: 'Generated text was inserted into the answer field.',
+		generatedTextInserted:
+			'Generated text was inserted into the answer field.',
 		generationFailed: 'Generation request failed.',
 		generationFailedAfter:
 			'Generation failed after {seconds} seconds.\n{message}',
@@ -130,7 +133,8 @@ const translations = {
 			'Generation request succeeded. Generations left: {count}.',
 		generationRequestSucceededWithUnknownQuota:
 			'Generation request succeeded. Generations left: unknown.',
-		generationRequestTimedOut: 'Generation request timed out after 60 seconds.',
+		generationRequestTimedOut:
+			'Generation request timed out after 60 seconds.',
 		history: 'History',
 		insert: 'Insert',
 		items: '{count} items',
@@ -155,7 +159,7 @@ const translations = {
 			'API_BASE_URL is empty. Open extension popup and set it in Dev Mode.',
 		emptyApiKeyBackground:
 			'API key is empty. Open extension popup and enter API key in Options.',
-		warningFallbackButtonTitle: '✨ AI-ответ added in fallback mode',
+		warningFallbackButtonTitle: 'Button added in fallback mode',
 		warningGenerateButtonMissing:
 			'The extension did not find the built-in “Сгенерировать” button in the expected page structure. The “✨ AI-ответ” button was added with simple styling, but the extension should be updated for the new Wildberries HTML.',
 		warningGenerateWrapperMissing:
@@ -165,9 +169,7 @@ const translations = {
 
 export type TranslationKey = keyof typeof translations.ru
 
-export function normalizeExtensionLanguage(
-	value: unknown
-): ExtensionLanguage {
+export function normalizeExtensionLanguage(value: unknown): ExtensionLanguage {
 	return value === 'en' || value === 'ru' ? value : defaultExtensionLanguage
 }
 
