@@ -34,10 +34,6 @@ const translations = {
 		diagnostics: 'Диагностика',
 		extensionAssistant: 'Ассистент расширения',
 		generatedResponse: 'Сгенерированный ответ',
-		generatedResponseInsertedDrawer:
-			'Сгенерированный ответ вставлен в форму ответа.',
-		generatedResponseInsertedNoModal:
-			'Сгенерированный ответ вставлен без dev-модального окна.',
 		generatedTextInserted: 'Сгенерированный текст вставлен в поле ответа.',
 		generationFailed: 'Генерация не удалась.',
 		generationFailedAfter:
@@ -48,7 +44,10 @@ const translations = {
 		generationRequestFailedWithStatus:
 			'Запрос генерации не удался, HTTP {status}.',
 		generationRequestRunning: 'Запрос генерации выполняется…',
-		generationRequestSucceeded: 'Запрос генерации выполнен успешно.',
+		generationRequestSucceededWithQuota:
+			'Генерация выполнена успешно. Осталось генераций: {count}.',
+		generationRequestSucceededWithUnknownQuota:
+			'Генерация выполнена успешно. Осталось генераций: неизвестно.',
 		generationRequestTimedOut: 'Запрос генерации занял больше 60 секунд.',
 		history: 'История',
 		insert: 'Вставить',
@@ -110,10 +109,6 @@ const translations = {
 		diagnostics: 'Diagnostics',
 		extensionAssistant: 'Extension assistant',
 		generatedResponse: 'Generated response',
-		generatedResponseInsertedDrawer:
-			'Generated response was inserted into the drawer.',
-		generatedResponseInsertedNoModal:
-			'Generated response was inserted without dev modal.',
 		generatedTextInserted: 'Generated text was inserted into the answer field.',
 		generationFailed: 'Generation request failed.',
 		generationFailedAfter:
@@ -124,7 +119,10 @@ const translations = {
 		generationRequestFailedWithStatus:
 			'Generation request failed with HTTP {status}.',
 		generationRequestRunning: 'Generation request is running…',
-		generationRequestSucceeded: 'Generation request succeeded.',
+		generationRequestSucceededWithQuota:
+			'Generation request succeeded. Generations left: {count}.',
+		generationRequestSucceededWithUnknownQuota:
+			'Generation request succeeded. Generations left: unknown.',
 		generationRequestTimedOut: 'Generation request timed out after 60 seconds.',
 		history: 'History',
 		insert: 'Insert',

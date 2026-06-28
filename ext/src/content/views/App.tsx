@@ -142,6 +142,21 @@ async function savePopupAlert(message: string, language: ExtensionLanguage) {
 	await addPopupHistory(t(language, 'generationFailedHistory', { message }))
 }
 
+function formatGenerationSuccessHistory(
+	result: GenerationResult,
+	language: ExtensionLanguage
+) {
+	const quotaRemaining = result.diagnostics?.quotaRemaining
+
+	if (typeof quotaRemaining === 'number' && Number.isFinite(quotaRemaining)) {
+		return t(language, 'generationRequestSucceededWithQuota', {
+			count: quotaRemaining
+		})
+	}
+
+	return t(language, 'generationRequestSucceededWithUnknownQuota')
+}
+
 function parseGenerationPayload(payload: unknown): GenerationResult | null {
 	if (
 		typeof payload !== 'object' ||
@@ -192,7 +207,7 @@ async function requestGeneration(
 	}
 
 	await chrome.storage.local.remove(popupAlertStorageKey)
-	await addPopupHistory(t(language, 'generationRequestSucceeded'))
+	await addPopupHistory(formatGenerationSuccessHistory(generationResult, language))
 
 	return generationResult
 }
@@ -835,7 +850,6 @@ function App() {
 					.filter(Boolean)
 					.join('\n')
 			)
-			await addPopupHistory(tr('generatedResponseInsertedDrawer'))
 			setParsedInfo(null)
 			resetGenerationState()
 		} catch (error: unknown) {
@@ -885,9 +899,6 @@ function App() {
 							insertGeneratedText(result.text, language)
 							setHelperButtonState('done')
 							setHelperPageAlert(null)
-							await addPopupHistory(
-								tr('generatedResponseInsertedNoModal')
-							)
 						} catch (error: unknown) {
 							const message =
 								error instanceof DOMException && error.name === 'AbortError'
