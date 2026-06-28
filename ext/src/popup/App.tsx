@@ -5,6 +5,7 @@ import {
 	updateExtensionConfig
 } from '@/config/extensionConfig'
 import {
+	getDateTimeLocale,
 	type ExtensionLanguage,
 	normalizeExtensionLanguage,
 	t
@@ -34,10 +35,13 @@ function normalizeApiBaseUrl(value: string) {
 	return value.trim().replace(/\/+$/, '')
 }
 
-function createHistoryMessage(message: string): HistoryItem {
+function createHistoryMessage(
+	message: string,
+	language: ExtensionLanguage
+): HistoryItem {
 	return {
 		id: crypto.randomUUID(),
-		createdAt: new Date().toLocaleString(),
+		createdAt: new Date().toLocaleString(getDateTimeLocale(language)),
 		message
 	}
 }
@@ -69,9 +73,12 @@ async function getStoredPopupAlert() {
 	return isPopupAlert(alert) ? alert : null
 }
 
-async function addHistory(message: string) {
+async function addHistory(message: string, language: ExtensionLanguage) {
 	const history = await getHistory()
-	const nextHistory = [createHistoryMessage(message), ...history].slice(0, 30)
+	const nextHistory = [createHistoryMessage(message, language), ...history].slice(
+		0,
+		30
+	)
 	await chrome.storage.local.set({ [historyStorageKey]: nextHistory })
 
 	return nextHistory
@@ -205,7 +212,7 @@ export default function App() {
 	}, [])
 
 	async function recordHistory(message: string) {
-		const nextHistory = await addHistory(message)
+		const nextHistory = await addHistory(message, language)
 		setHistory(nextHistory)
 	}
 

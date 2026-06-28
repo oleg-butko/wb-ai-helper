@@ -171,6 +171,10 @@ export function normalizeExtensionLanguage(
 	return value === 'en' || value === 'ru' ? value : defaultExtensionLanguage
 }
 
+export function getDateTimeLocale(language: ExtensionLanguage) {
+	return language === 'ru' ? 'ru-RU' : 'en-US'
+}
+
 export function t(
 	language: ExtensionLanguage,
 	key: TranslationKey,

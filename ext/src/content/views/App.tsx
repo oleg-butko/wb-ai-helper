@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { getExtensionConfig } from '@/config/extensionConfig'
 import {
 	defaultExtensionLanguage,
+	getDateTimeLocale,
 	type ExtensionLanguage,
 	t
 } from '@/i18n'
@@ -114,7 +115,7 @@ function formatDiagnostics(
 	].join('\n')
 }
 
-async function addPopupHistory(message: string) {
+async function addPopupHistory(message: string, language: ExtensionLanguage) {
 	const stored = await chrome.storage.local.get(popupHistoryStorageKey)
 	const history = Array.isArray(stored[popupHistoryStorageKey])
 		? (stored[popupHistoryStorageKey] as HistoryItem[])
@@ -122,7 +123,7 @@ async function addPopupHistory(message: string) {
 	const nextHistory = [
 		{
 			id: crypto.randomUUID(),
-			createdAt: new Date().toLocaleString(),
+			createdAt: new Date().toLocaleString(getDateTimeLocale(language)),
 			message
 		},
 		...history
@@ -139,7 +140,7 @@ async function savePopupAlert(message: string, language: ExtensionLanguage) {
 	}
 
 	await chrome.storage.local.set({ [popupAlertStorageKey]: alert })
-	await addPopupHistory(t(language, 'generationFailedHistory', { message }))
+	await addPopupHistory(t(language, 'generationFailedHistory', { message }), language)
 }
 
 function formatGenerationSuccessHistory(
@@ -207,7 +208,10 @@ async function requestGeneration(
 	}
 
 	await chrome.storage.local.remove(popupAlertStorageKey)
-	await addPopupHistory(formatGenerationSuccessHistory(generationResult, language))
+	await addPopupHistory(
+		formatGenerationSuccessHistory(generationResult, language),
+		language
+	)
 
 	return generationResult
 }
