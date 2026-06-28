@@ -4,6 +4,11 @@ import {
 	getExtensionConfig,
 	updateExtensionConfig
 } from '@/config/extensionConfig'
+import {
+	type ExtensionLanguage,
+	normalizeExtensionLanguage,
+	t
+} from '@/i18n'
 import './App.css'
 
 type PopupTab = 'history' | 'options' | 'dev'
@@ -109,19 +114,22 @@ export default function App() {
 	const [alert, setAlert] = useState<PopupAlert | null>(null)
 	const [isLoadingConfig, setIsLoadingConfig] = useState(true)
 	const [isCheckingApiKey, setIsCheckingApiKey] = useState(false)
+	const language = config?.language ?? 'ru'
+	const tr = (key: Parameters<typeof t>[1], params?: Parameters<typeof t>[2]) =>
+		t(language, key, params)
 
 	const tabs = useMemo(() => {
 		const baseTabs: Array<{ id: PopupTab; label: string }> = [
-			{ id: 'history', label: 'History' },
-			{ id: 'options', label: 'Options' }
+			{ id: 'history', label: t(language, 'history') },
+			{ id: 'options', label: t(language, 'options') }
 		]
 
 		if (config?.is_dev_mode) {
-			baseTabs.push({ id: 'dev', label: 'Dev Mode' })
+			baseTabs.push({ id: 'dev', label: t(language, 'devMode') })
 		}
 
 		return baseTabs
-	}, [config?.is_dev_mode])
+	}, [config?.is_dev_mode, language])
 
 	useEffect(() => {
 		Promise.all([getExtensionConfig(), getHistory(), getStoredPopupAlert()])
@@ -139,7 +147,7 @@ export default function App() {
 					message:
 						error instanceof Error
 							? error.message
-							: 'Could not load extension config.'
+							: tr('configLoadFailed')
 				})
 			})
 			.finally(() => setIsLoadingConfig(false))
@@ -150,19 +158,27 @@ export default function App() {
 			changes: Record<string, chrome.storage.StorageChange>,
 			areaName: string
 		) {
-			if (areaName !== 'local') {
+			if (areaName === 'sync') {
+				void getExtensionConfig().then((nextConfig) => {
+					setConfig(nextConfig)
+					setApiKeyInput(nextConfig.API_KEY)
+					setApiBaseUrlInput(nextConfig.API_BASE_URL)
+					setUserIdInput(nextConfig.user_id)
+				})
 				return
 			}
 
-			const alertChange = changes[popupAlertStorageKey]
-			const historyChange = changes[historyStorageKey]
+			if (areaName === 'local') {
+				const alertChange = changes[popupAlertStorageKey]
+				const historyChange = changes[historyStorageKey]
 
-			if (alertChange) {
-				setAlert(isPopupAlert(alertChange.newValue) ? alertChange.newValue : null)
-			}
+				if (alertChange) {
+					setAlert(isPopupAlert(alertChange.newValue) ? alertChange.newValue : null)
+				}
 
-			if (historyChange && Array.isArray(historyChange.newValue)) {
-				setHistory(historyChange.newValue as HistoryItem[])
+				if (historyChange && Array.isArray(historyChange.newValue)) {
+					setHistory(historyChange.newValue as HistoryItem[])
+				}
 			}
 		}
 
@@ -189,7 +205,7 @@ export default function App() {
 		await navigator.clipboard.writeText(alert.message)
 		setAlert({
 			kind: 'success',
-			message: 'Alert text was copied to clipboard.'
+			message: tr('alertCopied')
 		})
 	}
 
@@ -197,8 +213,13 @@ export default function App() {
 		const nextConfig = await updateExtensionConfig({ API_KEY: apiKeyInput.trim() })
 		setConfig(nextConfig)
 		setApiKeyInput(nextConfig.API_KEY)
-		setAlert({ kind: 'success', message: 'API key was saved.' })
-		await recordHistory('API key was updated in popup options.')
+		setAlert({ kind: 'success', message: tr('apiKeySaved') })
+		await recordHistory(tr('apiKeyUpdatedHistory'))
+	}
+
+	async function saveLanguage(nextLanguage: ExtensionLanguage) {
+		const nextConfig = await updateExtensionConfig({ language: nextLanguage })
+		setConfig(nextConfig)
 	}
 
 	async function saveDevConfig() {
@@ -209,13 +230,13 @@ export default function App() {
 		setConfig(nextConfig)
 		setApiBaseUrlInput(nextConfig.API_BASE_URL)
 		setUserIdInput(nextConfig.user_id)
-		setAlert({ kind: 'success', message: 'Dev config was saved.' })
-		await recordHistory('Dev config was updated from popup.')
+		setAlert({ kind: 'success', message: tr('devConfigSaved') })
+		await recordHistory(tr('devConfigUpdatedHistory'))
 	}
 
 	async function checkApiKey() {
 		if (!config) {
-			setAlert({ kind: 'error', message: 'Config is not loaded yet.' })
+			setAlert({ kind: 'error', message: tr('configNotLoaded') })
 			return
 		}
 
@@ -225,20 +246,20 @@ export default function App() {
 		if (!apiBaseUrl) {
 			setAlert({
 				kind: 'error',
-				message: 'API base URL is empty. Set it in Dev Mode or extension defaults.'
+				message: tr('apiBaseUrlEmpty')
 			})
 			return
 		}
 
 		if (!apiKey) {
-			setAlert({ kind: 'error', message: 'Enter API key before checking it.' })
+			setAlert({ kind: 'error', message: tr('apiKeyEmpty') })
 			return
 		}
 
 		setIsCheckingApiKey(true)
 		setAlert({
 			kind: 'info',
-			message: 'Checking API key. Timeout is 15 seconds.'
+			message: tr('checkingApiKey')
 		})
 
 		try {
@@ -256,11 +277,11 @@ export default function App() {
 			const payload = (await response.json().catch(() => null)) as unknown
 			const message =
 				getApiMessage(payload) ??
-				`API responded with HTTP ${response.status}.`
+				tr('apiRespondedWithStatus', { status: response.status })
 
 			if (!response.ok) {
 				setAlert({ kind: 'error', message })
-				await recordHistory(`API key check failed: ${message}`)
+				await recordHistory(tr('apiKeyCheckFailedWithMessage', { message }))
 				return
 			}
 
@@ -268,17 +289,17 @@ export default function App() {
 			setConfig(nextConfig)
 			setApiKeyInput(nextConfig.API_KEY)
 			setAlert({ kind: 'success', message })
-			await recordHistory(`API key check succeeded: ${message}`)
+			await recordHistory(tr('apiKeyCheckSucceededWithMessage', { message }))
 		} catch (error: unknown) {
 			const message =
 				error instanceof DOMException && error.name === 'AbortError'
-					? 'API key check timed out after 15 seconds.'
+					? tr('apiKeyCheckTimedOut')
 					: error instanceof Error
 						? error.message
-						: 'API key check failed.'
+						: tr('apiKeyCheckFailed')
 
 			setAlert({ kind: 'error', message })
-			await recordHistory(`API key check failed: ${message}`)
+			await recordHistory(tr('apiKeyCheckFailedWithMessage', { message }))
 		} finally {
 			setIsCheckingApiKey(false)
 		}
@@ -287,7 +308,7 @@ export default function App() {
 	if (isLoadingConfig) {
 		return (
 			<main className="popup-shell">
-				<div className="popup-card popup-card--center">Loading config…</div>
+				<div className="popup-card popup-card--center">{tr('loadingConfig')}</div>
 			</main>
 		)
 	}
@@ -297,7 +318,7 @@ export default function App() {
 			<header className="popup-header">
 				<div>
 					<p className="popup-eyebrow">WB AI Helper</p>
-					<h1>Extension assistant</h1>
+					<h1>{tr('extensionAssistant')}</h1>
 				</div>
 			</header>
 
@@ -318,7 +339,7 @@ export default function App() {
 				<section className={`popup-alert popup-alert--${alert.kind}`}>
 					<p>{alert.message}</p>
 					<button
-						aria-label="Close alert"
+						aria-label={tr('closeAlert')}
 						className="popup-alert__close"
 						type="button"
 						onClick={clearAlert}
@@ -326,23 +347,23 @@ export default function App() {
 						×
 					</button>
 					<button className="popup-alert__copy" type="button" onClick={copyAlert}>
-						Copy
+						{tr('copy')}
 					</button>
 				</section>
 			) : (
 				<section className="popup-alert popup-alert--empty">
-					<p>Messages from API and extension actions will appear here.</p>
+					<p>{tr('alertEmpty')}</p>
 				</section>
 			)}
 
 			{activeTab === 'history' ? (
 				<section className="popup-card popup-card--history">
 					<div className="popup-section-header">
-						<h2>History</h2>
-						<span>{history.length} items</span>
+						<h2>{tr('history')}</h2>
+						<span>{tr('items', { count: history.length })}</span>
 					</div>
 					{history.length === 0 ? (
-						<p className="popup-muted">No extension actions recorded yet.</p>
+						<p className="popup-muted">{tr('noHistory')}</p>
 					) : (
 						<ul className="history-list">
 							{history.map((item) => (
@@ -359,11 +380,25 @@ export default function App() {
 			{activeTab === 'options' ? (
 				<section className="popup-card">
 					<div className="popup-section-header">
-						<h2>Options</h2>
-						<span>API access</span>
+						<h2>{tr('options')}</h2>
+						<span>{tr('apiAccess')}</span>
 					</div>
 					<label className="popup-field">
-						<span>API key</span>
+						<span>{tr('language')}</span>
+						<select
+							value={language}
+							onChange={(event) => {
+								void saveLanguage(
+									normalizeExtensionLanguage(event.currentTarget.value)
+								)
+							}}
+						>
+							<option value="ru">{tr('languageRussian')}</option>
+							<option value="en">{tr('languageEnglish')}</option>
+						</select>
+					</label>
+					<label className="popup-field">
+						<span>{tr('apiKey')}</span>
 						<input
 							autoComplete="off"
 							placeholder="wbai_..."
@@ -374,7 +409,7 @@ export default function App() {
 					</label>
 					<div className="popup-actions">
 						<button type="button" onClick={saveApiKey}>
-							Save
+							{tr('save')}
 						</button>
 						<button
 							className="popup-primary"
@@ -383,7 +418,7 @@ export default function App() {
 							onClick={checkApiKey}
 						>
 							{isCheckingApiKey ? <span className="spinner" aria-hidden="true" /> : null}
-							{isCheckingApiKey ? 'Checking…' : 'Check API key'}
+							{isCheckingApiKey ? tr('checking') : tr('checkApiKey')}
 						</button>
 					</div>
 				</section>
@@ -392,8 +427,8 @@ export default function App() {
 			{activeTab === 'dev' && config?.is_dev_mode ? (
 				<section className="popup-card">
 					<div className="popup-section-header">
-						<h2>Dev Mode</h2>
-						<span>Local config</span>
+						<h2>{tr('devMode')}</h2>
+						<span>{tr('localConfig')}</span>
 					</div>
 					<label className="popup-field">
 						<span>API_BASE_URL</span>
@@ -414,7 +449,7 @@ export default function App() {
 					</label>
 					<div className="popup-actions">
 						<button className="popup-primary" type="button" onClick={saveDevConfig}>
-							Save Dev Config
+							{tr('saveDevConfig')}
 						</button>
 					</div>
 				</section>

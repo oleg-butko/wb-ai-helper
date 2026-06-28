@@ -1,7 +1,14 @@
+import {
+	defaultExtensionLanguage,
+	type ExtensionLanguage,
+	normalizeExtensionLanguage
+} from '@/i18n'
+
 export type ExtensionConfig = {
 	API_BASE_URL: string
 	API_KEY: string
 	user_id: string
+	language: ExtensionLanguage
 	is_dev_mode?: true
 }
 
@@ -46,6 +53,7 @@ export function createDefaultExtensionConfig(): ExtensionConfig {
 			API_BASE_URL: resolveApiBaseUrl(developApiBaseUrl),
 			API_KEY: '',
 			user_id: generateUuidV7(),
+			language: defaultExtensionLanguage,
 			is_dev_mode: true
 		}
 	}
@@ -53,7 +61,8 @@ export function createDefaultExtensionConfig(): ExtensionConfig {
 	return {
 		API_BASE_URL: resolveApiBaseUrl(productionApiBaseUrl),
 		API_KEY: '',
-		user_id: generateUuidV7()
+		user_id: generateUuidV7(),
+		language: defaultExtensionLanguage
 	}
 }
 
@@ -63,6 +72,7 @@ export async function resetExtensionConfig() {
 		'API_BASE_URL',
 		'API_KEY',
 		'user_id',
+		'language',
 		'is_dev_mode'
 	]
 
@@ -77,6 +87,7 @@ export async function getExtensionConfig() {
 		'API_BASE_URL',
 		'API_KEY',
 		'user_id',
+		'language',
 		'is_dev_mode'
 	])
 
@@ -89,6 +100,7 @@ export async function getExtensionConfig() {
 			API_BASE_URL: stored.API_BASE_URL,
 			API_KEY: stored.API_KEY,
 			user_id: stored.user_id,
+			language: normalizeExtensionLanguage(stored.language),
 			...(stored.is_dev_mode === true ? { is_dev_mode: true as const } : {})
 		}
 	}
@@ -97,7 +109,9 @@ export async function getExtensionConfig() {
 }
 
 export async function updateExtensionConfig(
-	patch: Partial<Pick<ExtensionConfig, 'API_BASE_URL' | 'API_KEY' | 'user_id'>>
+	patch: Partial<
+		Pick<ExtensionConfig, 'API_BASE_URL' | 'API_KEY' | 'user_id' | 'language'>
+	>
 ) {
 	await chrome.storage.sync.set(patch)
 

@@ -3,6 +3,7 @@ import {
 	getExtensionConfig,
 	resetExtensionConfig
 } from '../config/extensionConfig'
+import { defaultExtensionLanguage, t } from '../i18n'
 
 const workerGlobal = self as typeof self & {
 	enableDevMode: () => Promise<void>
@@ -179,23 +180,25 @@ async function fetchWithTimeout(url: string, init: RequestInit) {
 async function generateReviewResponse(
 	review: ExtensionReviewPayload
 ): Promise<GenerateReviewResponseResult> {
+	let language = defaultExtensionLanguage
+
 	try {
 		const config = await getExtensionConfig()
+		language = config.language
 		const apiBaseUrl = normalizeApiBaseUrl(config.API_BASE_URL)
 		const apiKey = config.API_KEY.trim()
 
 		if (!apiBaseUrl) {
 			return {
 				ok: false,
-				message:
-					'API_BASE_URL is empty. Open extension popup and set it in Dev Mode.'
+				message: t(language, 'emptyApiBaseUrlBackground')
 			}
 		}
 
 		if (!apiKey) {
 			return {
 				ok: false,
-				message: 'API key is empty. Open extension popup and enter API key in Options.'
+				message: t(language, 'emptyApiKeyBackground')
 			}
 		}
 
@@ -219,7 +222,9 @@ async function generateReviewResponse(
 			const details = getApiDetails(payload)
 			const message =
 				getApiMessage(payload) ??
-				`Generation request failed with HTTP ${response.status}.`
+				t(language, 'generationRequestFailedWithStatus', {
+					status: response.status
+				})
 
 			return {
 				ok: false,
@@ -236,10 +241,10 @@ async function generateReviewResponse(
 			ok: false,
 			message:
 				error instanceof DOMException && error.name === 'AbortError'
-					? 'Generation request timed out after 60 seconds.'
+					? t(language, 'generationRequestTimedOut')
 					: error instanceof Error
 						? error.message
-						: 'Generation request failed.'
+						: t(language, 'generationRequestFailed')
 		}
 	}
 }

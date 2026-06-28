@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { getExtensionConfig } from '@/config/extensionConfig'
+import {
+	defaultExtensionLanguage,
+	type ExtensionLanguage,
+	t
+} from '@/i18n'
 import { waitForElement } from '../utils/waitForElement'
 import './App.css'
 
@@ -92,9 +97,12 @@ function getText(element: Element) {
 	return element.textContent?.trim() ?? ''
 }
 
-function formatDiagnostics(diagnostics: GenerationDiagnostics | null) {
+function formatDiagnostics(
+	diagnostics: GenerationDiagnostics | null,
+	language: ExtensionLanguage
+) {
 	if (!diagnostics) {
-		return 'No diagnostics returned.'
+		return t(language, 'noDiagnostics')
 	}
 
 	return [
@@ -125,7 +133,7 @@ async function addPopupHistory(message: string) {
 	await chrome.storage.local.set({ [popupHistoryStorageKey]: nextHistory })
 }
 
-async function savePopupAlert(message: string) {
+async function savePopupAlert(message: string, language: ExtensionLanguage) {
 	const alert: PopupAlert = {
 		kind: 'error',
 		message,
@@ -133,7 +141,7 @@ async function savePopupAlert(message: string) {
 	}
 
 	await chrome.storage.local.set({ [popupAlertStorageKey]: alert })
-	await addPopupHistory(`Generation failed: ${message}`)
+	await addPopupHistory(t(language, 'generationFailedHistory', { message }))
 }
 
 function parseGenerationPayload(payload: unknown): GenerationResult | null {
@@ -162,14 +170,17 @@ function parseGenerationPayload(payload: unknown): GenerationResult | null {
 	}
 }
 
-async function requestGeneration(review: ParsedInfo): Promise<GenerationResult> {
+async function requestGeneration(
+	review: ParsedInfo,
+	language: ExtensionLanguage
+): Promise<GenerationResult> {
 	const result = (await chrome.runtime.sendMessage({
 		type: 'wb-ai-helper/generate-review-response',
 		review
 	})) as GenerateReviewResponseResult | undefined
 
 	if (!result) {
-		throw new Error('Background script did not return a generation response.')
+		throw new Error(t(language, 'generationRequestFailed'))
 	}
 
 	if (!result.ok) {
@@ -179,11 +190,11 @@ async function requestGeneration(review: ParsedInfo): Promise<GenerationResult> 
 	const generationResult = parseGenerationPayload(result.payload)
 
 	if (!generationResult) {
-		throw new Error('Generation response from API has unexpected format.')
+		throw new Error(t(language, 'unexpectedGenerationResponse'))
 	}
 
 	await chrome.storage.local.remove(popupAlertStorageKey)
-	await addPopupHistory('Generation request succeeded.')
+	await addPopupHistory(t(language, 'generationRequestSucceeded'))
 
 	return generationResult
 }
@@ -194,11 +205,11 @@ function findAnswerTextarea() {
 	)
 }
 
-function insertGeneratedText(text: string) {
+function insertGeneratedText(text: string, language: ExtensionLanguage) {
 	const textarea = findAnswerTextarea()
 
 	if (!textarea) {
-		throw new Error('Answer textarea was not found in the drawer.')
+		throw new Error(t(language, 'answerTextareaMissing'))
 	}
 
 	const valueSetter = Object.getOwnPropertyDescriptor(
@@ -582,7 +593,8 @@ function syncHelperButton(
 	portal: HTMLElement,
 	onHelperClick: () => void,
 	onWarning: (warning: HelperButtonWarning) => void,
-	onPageAlertHost: (host: HTMLElement | null) => void
+	onPageAlertHost: (host: HTMLElement | null) => void,
+	language: ExtensionLanguage
 ) {
 	const buttonsRoot = document.querySelector<HTMLElement>(buttonsRootSelector)
 
@@ -608,9 +620,8 @@ function syncHelperButton(
 	if (!buttonGen) {
 		buttonsRoot.append(createFallbackHelperButton(onHelperClick))
 		onWarning({
-			title: `${helperButtonText} добавлен в резервном режиме`,
-			message:
-				`Расширение не нашло встроенную кнопку «Сгенерировать» по ожидаемой структуре страницы. Кнопка «${helperButtonText}» добавлена с простым стилем, но расширение нужно обновить под новый HTML Wildberries.`
+			title: t(language, 'warningFallbackButtonTitle'),
+			message: t(language, 'warningGenerateButtonMissing')
 		})
 		return
 	}
@@ -622,9 +633,8 @@ function syncHelperButton(
 	if (!buttonGenWrapper) {
 		buttonsRoot.append(createFallbackHelperButton(onHelperClick))
 		onWarning({
-			title: `${helperButtonText} добавлен в резервном режиме`,
-			message:
-				`Расширение нашло кнопку «Сгенерировать», но не смогло определить ее контейнер. Кнопка «${helperButtonText}» добавлена с простым стилем, но расширение нужно обновить под новый HTML Wildberries.`
+			title: t(language, 'warningFallbackButtonTitle'),
+			message: t(language, 'warningGenerateWrapperMissing')
 		})
 		return
 	}
@@ -649,6 +659,39 @@ function App() {
 		useState<HelperPageAlert | null>(null)
 	const [helperPageAlertHost, setHelperPageAlertHost] =
 		useState<HTMLElement | null>(null)
+	const [language, setLanguage] = useState<ExtensionLanguage>(
+		defaultExtensionLanguage
+	)
+	const tr = (key: Parameters<typeof t>[1], params?: Parameters<typeof t>[2]) =>
+		t(language, key, params)
+
+	useEffect(() => {
+		let isMounted = true
+
+		void getExtensionConfig().then((config) => {
+			if (isMounted) {
+				setLanguage(config.language)
+			}
+		})
+
+		function handleStorageChange(
+			changes: Record<string, chrome.storage.StorageChange>,
+			areaName: string
+		) {
+			if (areaName === 'sync' && changes.language) {
+				void getExtensionConfig().then((config) => {
+					setLanguage(config.language)
+				})
+			}
+		}
+
+		chrome.storage.onChanged.addListener(handleStorageChange)
+
+		return () => {
+			isMounted = false
+			chrome.storage.onChanged.removeListener(handleStorageChange)
+		}
+	}, [])
 
 	useEffect(() => {
 		if (generationStatus !== 'loading' || generationStartedAt === null) {
@@ -701,13 +744,13 @@ function App() {
 		setGenerationSeconds(0)
 
 		try {
-			const result = await requestGeneration(review)
+			const result = await requestGeneration(review, language)
 			const seconds = Math.max(0, Math.floor((Date.now() - startedAt) / 1000))
 
 			setGenerationStatus('succeeded')
 			setGenerationText(result.text)
-			setGenerationMessage(`Generation finished in ${seconds} seconds.`)
-			setGenerationDiagnostics(formatDiagnostics(result.diagnostics))
+			setGenerationMessage(tr('generationFinished', { seconds }))
+			setGenerationDiagnostics(formatDiagnostics(result.diagnostics, language))
 			setGenerationSeconds(seconds)
 			setGenerationStartedAt(null)
 			setHelperButtonState('done')
@@ -718,18 +761,18 @@ function App() {
 			const seconds = Math.max(0, Math.floor((Date.now() - startedAt) / 1000))
 			const message =
 				error instanceof DOMException && error.name === 'AbortError'
-					? 'Generation request timed out after 60 seconds.'
+					? tr('generationRequestTimedOut')
 					: error instanceof Error
 						? error.message
-						: 'Generation request failed.'
+						: tr('generationRequestFailed')
 
 			setGenerationStatus('failed')
-			setGenerationMessage(`Generation failed after ${seconds} seconds.\n${message}`)
+			setGenerationMessage(tr('generationFailedAfter', { seconds, message }))
 			setGenerationDiagnostics('')
 			setGenerationSeconds(seconds)
 			setGenerationStartedAt(null)
 			setHelperButtonState('idle')
-			await savePopupAlert(message)
+			await savePopupAlert(message, language)
 			showPageAlert(message)
 
 			throw error
@@ -747,28 +790,28 @@ function App() {
 	async function handleInsert() {
 		if (!generationText) {
 			setGenerationStatus('failed')
-			setGenerationMessage('No generated text to insert yet.')
+			setGenerationMessage(tr('noGeneratedText'))
 			return
 		}
 
 		try {
-			insertGeneratedText(generationText)
+			insertGeneratedText(generationText, language)
 			setHelperButtonState('done')
 			setGenerationMessage((currentMessage) =>
-				[currentMessage, 'Generated text was inserted into the answer field.']
+				[currentMessage, tr('generatedTextInserted')]
 					.filter(Boolean)
 					.join('\n')
 			)
-			await addPopupHistory('Generated response was inserted into the drawer.')
+			await addPopupHistory(tr('generatedResponseInsertedDrawer'))
 			setParsedInfo(null)
 			resetGenerationState()
 		} catch (error: unknown) {
 			const message =
-				error instanceof Error ? error.message : 'Could not insert generated text.'
+				error instanceof Error ? error.message : tr('unknownInsertError')
 			setGenerationStatus('failed')
 			setGenerationMessage(message)
 			setHelperButtonState('idle')
-			await savePopupAlert(message)
+			await savePopupAlert(message, language)
 			showPageAlert(message)
 		}
 	}
@@ -805,22 +848,22 @@ function App() {
 
 							setHelperPageAlert(null)
 							setHelperButtonState('loading')
-							const result = await requestGeneration(parsed)
-							insertGeneratedText(result.text)
+							const result = await requestGeneration(parsed, language)
+							insertGeneratedText(result.text, language)
 							setHelperButtonState('done')
 							setHelperPageAlert(null)
 							await addPopupHistory(
-								'Generated response was inserted without dev modal.'
+								tr('generatedResponseInsertedNoModal')
 							)
 						} catch (error: unknown) {
 							const message =
 								error instanceof DOMException && error.name === 'AbortError'
-									? 'Generation request timed out after 60 seconds.'
+									? tr('generationRequestTimedOut')
 									: error instanceof Error
 										? error.message
-										: 'Generation request failed.'
+										: tr('generationRequestFailed')
 							setHelperButtonState('idle')
-							await savePopupAlert(message)
+							await savePopupAlert(message, language)
 							showPageAlert(message)
 						}
 					})()
@@ -847,7 +890,8 @@ function App() {
 						portal,
 						handleHelperClick,
 						handleWarning,
-						handlePageAlertHost
+						handlePageAlertHost,
+						language
 					)
 				}
 
@@ -934,7 +978,7 @@ function App() {
 		return () => {
 			abortController.abort()
 		}
-	}, [])
+	}, [language])
 
 	return (
 		<>
@@ -944,12 +988,12 @@ function App() {
 							<button
 								type='button'
 								className='helper-page-alert-close'
-								aria-label='Close alert'
+								aria-label={tr('closeAlert')}
 								onClick={() => setHelperPageAlert(null)}>
 								×
 							</button>
 							<div className='helper-page-alert-content'>
-								<strong>AI response error</strong>
+								<strong>{tr('messagesTitle')}</strong>
 								<p>{helperPageAlert.message}</p>
 							</div>
 							<div className='helper-page-alert-actions'>
@@ -959,13 +1003,13 @@ function App() {
 									onClick={() => {
 										void copyPageAlertMessage()
 									}}>
-									Copy
+									{tr('copy')}
 								</button>
 								<button
 									type='button'
 									className='helper-page-alert-ok'
 									onClick={() => setHelperPageAlert(null)}>
-									Ok
+									{tr('ok')}
 								</button>
 							</div>
 						</div>,
@@ -992,13 +1036,13 @@ function App() {
 									className='helper-modal-primary'
 									disabled={generationStatus === 'loading'}
 									onClick={handleDevSend}>
-									Send
+									{tr('send')}
 								</button>
 								<button
 									type='button'
 									disabled={generationStatus === 'loading' || !generationText}
 									onClick={handleInsert}>
-									Insert
+									{tr('insert')}
 								</button>
 							</div>
 							<button
@@ -1008,14 +1052,14 @@ function App() {
 									setParsedInfo(null)
 									resetGenerationState()
 								}}>
-								Close
+								{tr('close')}
 							</button>
 						</div>
 
 						{generationStatus === 'loading' ? (
 							<div className='helper-modal-loading'>
 								<div className='helper-modal-spinner' aria-hidden='true' />
-								<p>Generation request is running…</p>
+								<p>{tr('generationRequestRunning')}</p>
 								<strong>{generationSeconds} sec</strong>
 							</div>
 						) : (
@@ -1065,7 +1109,7 @@ function App() {
 
 								{generationText ? (
 									<div className='helper-modal-result'>
-										<h3>Generated response</h3>
+										<h3>{tr('generatedResponse')}</h3>
 										<p>{generationText}</p>
 									</div>
 								) : null}
@@ -1083,7 +1127,7 @@ function App() {
 
 								{generationDiagnostics ? (
 									<div className='helper-modal-diagnostics'>
-										<h3>Diagnostics</h3>
+										<h3>{tr('diagnostics')}</h3>
 										<pre>{generationDiagnostics}</pre>
 									</div>
 								) : null}
@@ -1108,7 +1152,7 @@ function App() {
 								type='button'
 								className='helper-modal-close'
 								onClick={() => setHelperButtonWarning(null)}>
-								Close
+								{tr('close')}
 							</button>
 						</div>
 
