@@ -103,3 +103,15 @@ export async function updateExtensionConfig(
 
 	return getExtensionConfig()
 }
+
+export async function enableDevModeExtensionConfig() {
+	const config = await getExtensionConfig()
+	const nextConfig: ExtensionConfig = {
+		...config,
+		is_dev_mode: true
+	}
+
+	await chrome.storage.sync.set(nextConfig)
+
+	return nextConfig
+}

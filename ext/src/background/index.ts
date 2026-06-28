@@ -1,9 +1,11 @@
 import {
+	enableDevModeExtensionConfig,
 	getExtensionConfig,
 	resetExtensionConfig
 } from '../config/extensionConfig'
 
 const workerGlobal = self as typeof self & {
+	enableDevMode: () => Promise<void>
 	resetConfig: () => Promise<void>
 }
 
@@ -37,12 +39,41 @@ type GenerateReviewResponseResult =
 			message: string
 	  }
 
+const sellerNotAnsweredFeedbacksUrlPattern =
+	'https://seller.wildberries.ru/feedbacks/feedbacks-tab/not-answered*'
+
 async function resetConfig() {
 	const config = await resetExtensionConfig()
 	console.info('[wb-ai-helper] Extension config reset', config)
 }
 
 workerGlobal.resetConfig = resetConfig
+
+async function reloadSellerNotAnsweredFeedbackTabs() {
+	const tabs = await chrome.tabs.query({
+		url: sellerNotAnsweredFeedbacksUrlPattern
+	})
+
+	await Promise.all(
+		tabs
+			.filter((tab): tab is chrome.tabs.Tab & { id: number } => typeof tab.id === 'number')
+			.map((tab) => chrome.tabs.reload(tab.id))
+	)
+
+	return tabs.length
+}
+
+async function enableDevMode() {
+	const config = await enableDevModeExtensionConfig()
+	const reloadedTabs = await reloadSellerNotAnsweredFeedbackTabs()
+	console.info('[wb-ai-helper] Dev mode enabled', {
+		config,
+		reloadedTabs
+	})
+	chrome.runtime.reload()
+}
+
+workerGlobal.enableDevMode = enableDevMode
 
 function normalizeApiBaseUrl(value: string) {
 	return value.trim().replace(/\/+$/, '')
