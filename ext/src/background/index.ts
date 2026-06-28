@@ -41,6 +41,8 @@ type GenerateReviewResponseResult =
 
 const sellerNotAnsweredFeedbacksUrlPattern =
 	'https://seller.wildberries.ru/feedbacks/feedbacks-tab/not-answered*'
+const pendingSellerFeedbackTabsReloadStorageKey =
+	'pending_seller_feedback_tabs_reload_after_extension_reload'
 
 async function resetConfig() {
 	const config = await resetExtensionConfig()
@@ -65,15 +67,43 @@ async function reloadSellerNotAnsweredFeedbackTabs() {
 
 async function enableDevMode() {
 	const config = await enableDevModeExtensionConfig()
-	const reloadedTabs = await reloadSellerNotAnsweredFeedbackTabs()
+	await chrome.storage.local.set({
+		[pendingSellerFeedbackTabsReloadStorageKey]: true
+	})
 	console.info('[wb-ai-helper] Dev mode enabled', {
 		config,
-		reloadedTabs
+		nextStep: 'Reloading extension before reloading seller feedback tabs.'
 	})
 	chrome.runtime.reload()
 }
 
 workerGlobal.enableDevMode = enableDevMode
+
+async function reloadSellerFeedbackTabsAfterExtensionReloadIfNeeded() {
+	const stored = await chrome.storage.local.get(
+		pendingSellerFeedbackTabsReloadStorageKey
+	)
+
+	if (stored[pendingSellerFeedbackTabsReloadStorageKey] !== true) {
+		return
+	}
+
+	await chrome.storage.local.remove(pendingSellerFeedbackTabsReloadStorageKey)
+	const reloadedTabs = await reloadSellerNotAnsweredFeedbackTabs()
+	console.info(
+		'[wb-ai-helper] Seller feedback tabs reloaded after extension reload',
+		{
+			reloadedTabs
+		}
+	)
+}
+
+reloadSellerFeedbackTabsAfterExtensionReloadIfNeeded().catch((error: unknown) => {
+	console.error(
+		'[wb-ai-helper] Failed to reload seller feedback tabs after extension reload',
+		error
+	)
+})
 
 function normalizeApiBaseUrl(value: string) {
 	return value.trim().replace(/\/+$/, '')
