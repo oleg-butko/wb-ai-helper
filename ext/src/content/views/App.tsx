@@ -11,7 +11,6 @@ import './App.css'
 
 const helperButtonId = 'crxjs-helper-button'
 const helperPageAlertHostId = 'crxjs-helper-page-alert-host'
-const helperButtonText = '✨ AI-ответ'
 const helperButtonLoadingText = 'Генерируем...'
 const helperButtonDoneText = 'Готово ✓'
 const popupAlertStorageKey = 'popup_last_alert'
@@ -472,23 +471,41 @@ function ensureHelperPageAlertHost(buttonsRoot: HTMLElement) {
 	return host
 }
 
-function getHelperButtonLabel(button: HTMLButtonElement) {
-	const spans = Array.from(button.querySelectorAll('span'))
+function setHelperButtonLabel(button: HTMLButtonElement, text: string) {
+	const label = button.querySelector<HTMLElement>('.crxjs-ai-reply-button-label')
 
-	return (
-		spans.find((span) => span.className.includes('caption__')) ??
-		spans[spans.length - 1] ??
-		button
-	)
+	if (label) {
+		label.textContent = text
+		return
+	}
+
+	button.textContent = text
 }
 
-function setHelperButtonLabel(button: HTMLButtonElement, text: string) {
-	getHelperButtonLabel(button).textContent = text
+function setHelperButtonContent(button: HTMLButtonElement, text: string) {
+	button.textContent = ''
+
+	const icon = document.createElement('img')
+	icon.className = 'crxjs-ai-reply-button-icon'
+	icon.src = chrome.runtime.getURL('button1.svg')
+	icon.alt = ''
+	icon.setAttribute('aria-hidden', 'true')
+
+	const label = document.createElement('span')
+	label.className = 'crxjs-ai-reply-button-label'
+	label.textContent = text
+
+	const badge = document.createElement('span')
+	badge.className = 'crxjs-ai-reply-button-badge'
+	badge.textContent = 'AI'
+
+	button.append(icon, label, badge)
 }
 
 function setHelperButtonState(state: HelperButtonState) {
 	const wrapper = document.getElementById(helperButtonId)
 	const button = wrapper?.querySelector<HTMLButtonElement>('button')
+	const language = button?.dataset.helperLanguage as ExtensionLanguage | undefined
 
 	if (!wrapper || !button) {
 		return
@@ -509,7 +526,10 @@ function setHelperButtonState(state: HelperButtonState) {
 		return
 	}
 
-	setHelperButtonLabel(button, helperButtonText)
+	setHelperButtonLabel(
+		button,
+		t(language ?? defaultExtensionLanguage, 'createReplyButton')
+	)
 }
 
 function findGenerateButton(buttonsRoot: HTMLElement) {
@@ -531,7 +551,8 @@ function findGenerateButton(buttonsRoot: HTMLElement) {
 
 function createHelperButton(
 	buttonGenWrapper: Element,
-	onHelperClick: () => void
+	onHelperClick: () => void,
+	language: ExtensionLanguage
 ) {
 	const wrapper = buttonGenWrapper.cloneNode(true) as HTMLElement
 	wrapper.id = helperButtonId
@@ -552,19 +573,23 @@ function createHelperButton(
 		button.disabled = false
 		button.removeAttribute('aria-disabled')
 		button.setAttribute('aria-busy', 'false')
+		button.dataset.helperLanguage = language
 		button.classList.add('crxjs-ai-reply-button')
 		button.addEventListener('click', (event) => {
 			event.preventDefault()
 			event.stopPropagation()
 			onHelperClick()
 		})
-		setHelperButtonLabel(button, helperButtonText)
+		setHelperButtonContent(button, t(language, 'createReplyButton'))
 	}
 
 	return wrapper
 }
 
-function createFallbackHelperButton(onHelperClick: () => void) {
+function createFallbackHelperButton(
+	onHelperClick: () => void,
+	language: ExtensionLanguage
+) {
 	const wrapper = document.createElement('div')
 	wrapper.id = helperButtonId
 	wrapper.className = 'helper-fallback-button-wrapper'
@@ -572,13 +597,14 @@ function createFallbackHelperButton(onHelperClick: () => void) {
 	const button = document.createElement('button')
 	button.type = 'button'
 	button.className = 'helper-fallback-button crxjs-ai-reply-button'
-	button.textContent = helperButtonText
 	button.setAttribute('aria-busy', 'false')
+	button.dataset.helperLanguage = language
 	button.addEventListener('click', (event) => {
 		event.preventDefault()
 		event.stopPropagation()
 		onHelperClick()
 	})
+	setHelperButtonContent(button, t(language, 'createReplyButton'))
 
 	wrapper.append(button)
 
@@ -612,13 +638,26 @@ function syncHelperButton(
 	onPageAlertHost(ensureHelperPageAlertHost(buttonsRoot))
 
 	if (document.getElementById(helperButtonId)) {
+		const button = document.querySelector<HTMLButtonElement>(
+			`#${helperButtonId} button`
+		)
+
+		if (
+			button &&
+			button.dataset.helperLanguage !== language &&
+			button.getAttribute('aria-busy') !== 'true'
+		) {
+			button.dataset.helperLanguage = language
+			setHelperButtonLabel(button, t(language, 'createReplyButton'))
+		}
+
 		return
 	}
 
 	const buttonGen = findGenerateButton(buttonsRoot)
 
 	if (!buttonGen) {
-		buttonsRoot.append(createFallbackHelperButton(onHelperClick))
+		buttonsRoot.append(createFallbackHelperButton(onHelperClick, language))
 		onWarning({
 			title: t(language, 'warningFallbackButtonTitle'),
 			message: t(language, 'warningGenerateButtonMissing')
@@ -631,7 +670,7 @@ function syncHelperButton(
 	)
 
 	if (!buttonGenWrapper) {
-		buttonsRoot.append(createFallbackHelperButton(onHelperClick))
+		buttonsRoot.append(createFallbackHelperButton(onHelperClick, language))
 		onWarning({
 			title: t(language, 'warningFallbackButtonTitle'),
 			message: t(language, 'warningGenerateWrapperMissing')
@@ -639,7 +678,7 @@ function syncHelperButton(
 		return
 	}
 
-	buttonGenWrapper.after(createHelperButton(buttonGenWrapper, onHelperClick))
+	buttonGenWrapper.after(createHelperButton(buttonGenWrapper, onHelperClick, language))
 }
 
 function App() {

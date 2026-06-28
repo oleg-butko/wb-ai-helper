@@ -310,22 +310,26 @@
 }
 
 .crxjs-ai-reply-button-wrapper {
-  --helper-ai-gradient: linear-gradient(135deg, #6d5dfc 0%, #4868e8 52%, #3156d4 100%);
-  --helper-ai-gradient-hover: linear-gradient(135deg, #7a6cff 0%, #5575f0 52%, #3b61de 100%);
+  --helper-ai-gradient: linear-gradient(135deg, #b963ff 0%, #9a41fe 48%, #7423df 100%);
+  --helper-ai-gradient-hover: linear-gradient(135deg, #c779ff 0%, #a954ff 48%, #8130ec 100%);
 }
 
 #crxjs-helper-button button.crxjs-ai-reply-button,
 #crxjs-helper-button .crxjs-ai-reply-button,
 .helper-fallback-button.crxjs-ai-reply-button {
+  display: inline-flex;
   min-height: 2rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   border: 0;
   border-radius: 10px;
-  padding-inline: 0.75rem;
-  background: var(--helper-ai-gradient, linear-gradient(135deg, #6d5dfc 0%, #4868e8 52%, #3156d4 100%));
+  padding-inline: 0.75rem 0.5rem;
+  background: var(--helper-ai-gradient, linear-gradient(135deg, #b963ff 0%, #9a41fe 48%, #7423df 100%));
   color: #ffffff;
   box-shadow:
-    inset 0 0 0 1px rgb(255 255 255 / 0.14),
-    0 4px 10px rgb(49 86 212 / 0.18);
+    inset 0 0 0 1px rgb(255 255 255 / 0.16),
+    0 4px 10px rgb(154 65 254 / 0.2);
   cursor: pointer;
   font: inherit;
   font-weight: 700;
@@ -340,10 +344,10 @@
 #crxjs-helper-button button.crxjs-ai-reply-button:hover,
 #crxjs-helper-button .crxjs-ai-reply-button:hover,
 .helper-fallback-button.crxjs-ai-reply-button:hover {
-  background: var(--helper-ai-gradient-hover, linear-gradient(135deg, #7a6cff 0%, #5575f0 52%, #3b61de 100%));
+  background: var(--helper-ai-gradient-hover, linear-gradient(135deg, #c779ff 0%, #a954ff 48%, #8130ec 100%));
   box-shadow:
     inset 0 0 0 1px rgb(255 255 255 / 0.2),
-    0 5px 12px rgb(49 86 212 / 0.24);
+    0 5px 12px rgb(154 65 254 / 0.28);
   filter: brightness(1.03);
 }
 
@@ -362,9 +366,41 @@
   fill: currentColor;
 }
 
+.crxjs-ai-reply-button-icon {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+  color: #ffffff;
+  filter: brightness(0) invert(1);
+}
+
+.crxjs-ai-reply-button-label {
+  color: #ffffff;
+  white-space: nowrap;
+}
+
+.crxjs-ai-reply-button-badge {
+  display: inline-flex;
+  min-width: 1.65rem;
+  min-height: 1.25rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.375rem;
+  border: 1px solid rgb(255 255 255 / 0.58);
+  border-radius: 6px;
+  background: rgb(255 255 255 / 0.92);
+  color: #8a34ea;
+  font-family: "Arial Narrow", "Roboto Condensed", "Segoe UI", sans-serif;
+  font-size: 0.6875rem;
+  font-stretch: condensed;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
 #crxjs-helper-button[data-helper-state="done"] button.crxjs-ai-reply-button,
 #crxjs-helper-button[data-helper-state="done"] .crxjs-ai-reply-button {
-  background: linear-gradient(135deg, #5c6df0 0%, #3f63db 100%);
+  background: linear-gradient(135deg, #a856f4 0%, #8e39ed 100%);
 }
 
 .helper-fallback-button {
