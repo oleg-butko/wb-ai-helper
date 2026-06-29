@@ -32,7 +32,7 @@ const translations = {
 		configLoadFailed: 'Не удалось загрузить настройки расширения.',
 		configNotLoaded: 'Настройки ещё не загружены.',
 		copy: 'Копировать',
-		createReplyButton: 'Сгенерировать ответ',
+		createReplyButton: 'AI ответ',
 		devConfigSaved: 'Dev настройки сохранены.',
 		devConfigUpdatedHistory: 'Dev настройки обновлены из popup.',
 		devMode: 'Dev Mode',
@@ -62,7 +62,7 @@ const translations = {
 		languageRussian: 'Русский',
 		loadingConfig: 'Загрузка настроек…',
 		localConfig: 'Локальные настройки',
-		messagesTitle: 'Ошибка AI-ответа',
+		messagesTitle: 'Ошибка AI ответа',
 		noDiagnostics: 'Диагностика не вернулась.',
 		noGeneratedText: 'Нет сгенерированного текста для вставки.',
 		noHistory: 'Действий расширения пока нет.',
@@ -78,11 +78,11 @@ const translations = {
 		emptyApiKeyBackground:
 			'API ключ пустой. Откройте popup расширения и введите API ключ в настройках.',
 		warningFallbackButtonTitle:
-			'Кнопка AI-ответ добавлена в резервном режиме',
+			'Кнопка AI ответ добавлена в резервном режиме',
 		warningGenerateButtonMissing:
-			'Расширение не нашло встроенную кнопку «Сгенерировать» по ожидаемой структуре страницы. Кнопка «AI-ответ» добавлена с простым стилем, но расширение нужно обновить под новый HTML Wildberries.',
+			'Расширение не нашло встроенную кнопку «Сгенерировать» по ожидаемой структуре страницы. Кнопка «AI ответ» добавлена с простым стилем, но расширение нужно обновить под новый HTML Wildberries.',
 		warningGenerateWrapperMissing:
-			'Расширение нашло кнопку «Сгенерировать», но не смогло определить ее контейнер. Кнопка «AI-ответ» добавлена с простым стилем, но расширение нужно обновить под новый HTML Wildberries.'
+			'Расширение нашло кнопку «Сгенерировать», но не смогло определить ее контейнер. Кнопка «AI ответ» добавлена с простым стилем, но расширение нужно обновить под новый HTML Wildberries.'
 	},
 	en: {
 		alertCopied: 'Alert text was copied to clipboard.',
@@ -111,7 +111,7 @@ const translations = {
 		configLoadFailed: 'Could not load extension config.',
 		configNotLoaded: 'Config is not loaded yet.',
 		copy: 'Copy',
-		createReplyButton: 'Generate a response',
+		createReplyButton: 'AI Response',
 		devConfigSaved: 'Dev config was saved.',
 		devConfigUpdatedHistory: 'Dev config was updated from popup.',
 		devMode: 'Dev Mode',
@@ -159,11 +159,11 @@ const translations = {
 			'API_BASE_URL is empty. Open extension popup and set it in Dev Mode.',
 		emptyApiKeyBackground:
 			'API key is empty. Open extension popup and enter API key in Options.',
-		warningFallbackButtonTitle: 'Button added in fallback mode',
+		warningFallbackButtonTitle: 'AI Response button added in fallback mode',
 		warningGenerateButtonMissing:
-			'The extension did not find the built-in “Сгенерировать” button in the expected page structure. The “✨ AI-ответ” button was added with simple styling, but the extension should be updated for the new Wildberries HTML.',
+			'The extension did not find the button in the expected page structure. The “AI Response” button was added with simple styling, but the extension should be updated for the new Wildberries HTML.',
 		warningGenerateWrapperMissing:
-			'The extension found the “Сгенерировать” button, but could not detect its container. The “✨ AI-ответ” button was added with simple styling, but the extension should be updated for the new Wildberries HTML.'
+			'The extension found the button, but could not detect its container. The “AI Response” button was added with simple styling, but the extension should be updated for the new Wildberries HTML.'
 	}
 } as const
 
