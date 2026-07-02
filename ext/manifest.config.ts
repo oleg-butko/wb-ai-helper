@@ -13,7 +13,7 @@ export function createManifest(mode: string) {
 		},
 		permissions: ['storage'],
 		host_permissions: [
-			'https://soberly-brave-rabbitfish.cloudpub.ru/*/*',
+			'https://https://*.jocs.ru/*/*',
 			'https://seller.wildberries.ru/feedbacks/feedbacks-tab/not-answered/*/*'
 		],
 		action: {
