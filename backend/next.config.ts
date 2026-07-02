@@ -13,11 +13,11 @@ import type { NextConfig } from "next";
 }
 
 TODO make it only for dev env
-*/
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+*/
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ['deb4', 'deb4.local'],
+  allowedDevOrigins: ['jocs.ru', 'deb4.local'],
   distDir: process.env.NEXT_DIST_DIR ?? ".next",
 };
 
