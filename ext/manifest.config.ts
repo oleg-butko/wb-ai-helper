@@ -9,16 +9,18 @@ export function createManifest(mode: string) {
 		name: isDevelop ? `${pkg.name} Develop` : pkg.name,
 		version: pkg.version,
 		icons: {
-			48: 'public/logo.png'
+      16: 'public/logo-128x128.png',
+      48: 'public/logo-128x128.png',
+			128: 'public/logo-128x128.png'
 		},
 		permissions: ['storage'],
 		host_permissions: [
-			'https://https://*.jocs.ru/*/*',
+			'https://*.jocs.ru/*/*',
 			'https://seller.wildberries.ru/feedbacks/feedbacks-tab/not-answered/*/*'
 		],
 		action: {
 			default_icon: {
-				48: 'public/logo.png'
+				128: 'public/logo-128x128.png'
 			},
 			default_popup: 'src/popup/index.html'
 		},
