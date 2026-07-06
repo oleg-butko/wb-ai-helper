@@ -294,6 +294,11 @@ export function AdminAiPromptProfilesCard() {
         <Card withBorder radius="lg" p="lg">
           <Stack gap="md">
             <Title order={3}>Preview</Title>
+            <Text c="dimmed" size="sm">
+              Preview uses the example parsed JSON below. Real generation uses parsed JSON sent by the extension
+              from the open drawer. Unsaved template changes are preview-only until Save is clicked, and only the
+              active saved profile is used by the API.
+            </Text>
             <Textarea
               autosize
               minRows={14}

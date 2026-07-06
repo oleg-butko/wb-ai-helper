@@ -9,8 +9,8 @@ export const extensionParsedReviewSchema = z.object({
   product_url: z.string(),
   vendor_code_1: z.string(),
   vendor_code_2: z.string(),
-  colors: z.string(),
-  size: z.string(),
+  colors: z.string().optional().default(""),
+  size: z.string().optional().default(""),
 });
 
 export const extensionReviewRequestSchema = z.object({

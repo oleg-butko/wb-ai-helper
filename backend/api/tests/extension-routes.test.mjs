@@ -20,6 +20,11 @@ const parsedReview = {
   colors: "Коричневый, коричневый мрамор, коричневый ротанг, коричневый меланж, светло-коричневый",
   size: "M",
 };
+const {
+  colors: _optionalColors,
+  size: _optionalSize,
+  ...parsedReviewWithoutOptionalCharacteristics
+} = parsedReview;
 
 function createExtensionServices(overrides = {}) {
   return createServices({
@@ -290,7 +295,7 @@ await runCase("POST /v1/extension/review-response calls the active provider and 
         };
       },
       async recordExtensionGenerationEvent(input) {
-        calls.push(["event", input.eventType]);
+        calls.push(["event", input]);
       },
       async ensureExtensionUser(input) {
         calls.push(["ensureUser", input]);
@@ -324,7 +329,7 @@ await runCase("POST /v1/extension/review-response calls the active provider and 
       },
       payload: {
         user_id: extensionUserId,
-        review: parsedReview,
+        review: parsedReviewWithoutOptionalCharacteristics,
       },
     });
 
@@ -349,7 +354,7 @@ await runCase("POST /v1/extension/review-response calls the active provider and 
     assert.deepEqual(
       calls
         .filter(([name]) => name === "event")
-        .map(([, eventType]) => eventType),
+        .map(([, event]) => event.eventType),
       [
         "request_received",
         "api_key_validated",
@@ -360,6 +365,22 @@ await runCase("POST /v1/extension/review-response calls the active provider and 
         "quota_consumed",
       ],
     );
+    assert.equal(
+      calls.find(([name]) => name === "createRequest")[1].requestPayload.review.colors,
+      "",
+    );
+    assert.equal(
+      calls.find(([name]) => name === "createRequest")[1].requestPayload.review.size,
+      "",
+    );
+    const promptRenderedEvent = calls
+      .filter(([name]) => name === "event")
+      .map(([, event]) => event)
+      .find((event) => event.eventType === "prompt_rendered");
+    assert.equal(promptRenderedEvent.details.prompt_profile_id, promptProfileId);
+    assert.equal(promptRenderedEvent.details.product_details_count, 3);
+    assert.deepEqual(promptRenderedEvent.details.product_details_preview, parsedReview.product_details);
+    assert.match(promptRenderedEvent.details.rendered_prompt_preview, /Product: Парные худи/);
     assert.equal(
       calls.some(([name]) => name === "consumeQuota"),
       true,

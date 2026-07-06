@@ -48,6 +48,14 @@ function createConfigurationError({ code, message }) {
   return error;
 }
 
+function createPromptPreview(value, maxLength = 1_000) {
+  if (value.length <= maxLength) {
+    return value;
+  }
+
+  return `${value.slice(0, maxLength)}…`;
+}
+
 function getReviewResponseErrorCode(error) {
   if (error?.code === "extension_user_create_failed") {
     return "extension_user_create_failed";
@@ -224,6 +232,9 @@ export async function registerExtensionRoutes(app) {
         eventType: "prompt_rendered",
         details: {
           prompt_profile_id: promptProfile.id,
+          product_details_count: body.review.product_details.length,
+          product_details_preview: body.review.product_details.slice(0, 10),
+          rendered_prompt_preview: createPromptPreview(productDetailsPrompt),
         },
       });
 

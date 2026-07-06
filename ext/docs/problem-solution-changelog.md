@@ -1,5 +1,11 @@
 # Problem-solution changelog
 
+## Parse review text details from drawer feedback blocks
+
+Problem: `product_details` was built only from the drawer's `Product-item-details` block, so real generation could receive the review timestamp plus purchase date while missing the customer's `Плюсы:`, `Минусы:`, or `Комментарий:` text. Some reviews also contain only a subset of those blocks, or use chips instead of typed text.
+
+Solution: Build `product_details` from purchase details plus the feedback text blocks that are actually present. Date/time and `Ещё` UI noise are filtered out, typed text and chips are combined under their `Плюсы`, `Минусы`, or `Комментарий` labels, and missing optional `colors`/`size` values no longer trigger parser warnings.
+
 ## Add popup history/options/dev-mode tabs
 
 Problem: The extension popup still showed the CRXJS/Vite demo screen, so users had no place to enter an extension API key, check it, or see recent extension actions. Development-only config controls also needed to stay hidden from normal production users.

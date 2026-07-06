@@ -1,5 +1,11 @@
 # Changelog
 
+## Extension prompt payload diagnostics and optional characteristics
+
+Problem: the admin prompt preview could look correct while real generation used different parsed JSON from the extension, and products without color or size characteristics should not be rejected or treated as parser failures.
+
+Solution: clarified the admin prompt preview copy so admins know it uses example JSON until saved/activated, allowed missing `colors` and `size` review fields to default to empty strings, and added prompt-render audit details with `product_details` count plus safe previews of the parsed details and rendered user prompt.
+
 ## Prompt preview dark-theme surface
 
 Problem: the AI prompt preview cards forced `gray.0` as their background, which looked correct in light theme but produced a white surface with low-contrast text in dark theme.

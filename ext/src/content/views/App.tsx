@@ -256,6 +256,80 @@ function getTextValues(root: ParentNode) {
   return Array.from(root.querySelectorAll(textSelector)).map(getText).filter(Boolean)
 }
 
+function getChipValues(root: ParentNode) {
+  return Array.from(root.querySelectorAll('div[data-name="Chips"]'))
+    .map(getText)
+    .filter(Boolean)
+}
+
+function isProductDetailsNoise(value: string) {
+  return (
+    value === 'Ещё' ||
+    /^\d{2}\.\d{2}\.\d{4}\s+в\s+\d{2}:\d{2}$/.test(value)
+  )
+}
+
+function parsePurchaseDetails(root: ParentNode) {
+  const productDetailsRoot = root.querySelector(
+    'div[data-testid="Product-item-details"]'
+  )
+
+  return productDetailsRoot
+    ? getTextValues(productDetailsRoot).filter((value) => !isProductDetailsNoise(value))
+    : []
+}
+
+function findAncestorByClassPrefix(element: Element, prefix: string) {
+  let ancestor = element.parentElement
+
+  while (ancestor) {
+    if (hasClassPrefix(ancestor, prefix)) {
+      return ancestor
+    }
+
+    ancestor = ancestor.parentElement
+  }
+
+  return null
+}
+
+function uniqueValues(values: string[]) {
+  return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)))
+}
+
+function parseFeedbackDetailLines(root: ParentNode) {
+  const labels = new Set(['Плюсы', 'Минусы', 'Комментарий'])
+
+  return Array.from(root.querySelectorAll('div[data-testid="text-ellipse"]')).flatMap(
+    (textBlock) => {
+      const textValues = Array.from(textBlock.querySelectorAll(textSelector)).map(getText)
+      const rawLabel = textValues[0] ?? ''
+      const labelMatch = rawLabel.match(/^(Плюсы|Минусы|Комментарий):\s*(.*)$/)
+
+      if (!labelMatch || !labels.has(labelMatch[1])) {
+        return []
+      }
+
+      const label = labelMatch[1]
+      const valueFromLabel = labelMatch[2]
+      const textWrapper =
+        findAncestorByClassPrefix(textBlock, 'Feedback-text-block__text-wrapper__') ??
+        textBlock
+      const values = uniqueValues([
+        valueFromLabel,
+        ...textValues.slice(1),
+        ...getChipValues(textWrapper)
+      ])
+
+      if (values.length === 0) {
+        return []
+      }
+
+      return [`${label}: ${values.join(', ')}`]
+    }
+  )
+}
+
 function findReasonsRoot(root: ParentNode) {
   return Array.from(root.querySelectorAll('div')).find((element) =>
     Array.from(element.classList).some((className) =>
@@ -374,9 +448,6 @@ function parseRating(root: ParentNode) {
 function parseFeedbackInfo(root: ParentNode): ParsedInfo {
   const infoRoot = findFeedbackInfoRoot(root)
   const firstText = infoRoot.querySelector(textSelector)
-  const productDetailsRoot = infoRoot.querySelector(
-    'div[data-testid="Product-item-details"]'
-  )
   const reasonsRoot = findReasonsRoot(infoRoot)
   const feedbackReasons = reasonsRoot ? getTextValues(reasonsRoot) : []
 
@@ -391,14 +462,20 @@ function parseFeedbackInfo(root: ParentNode): ParsedInfo {
 
   const parsedInfo: ParsedInfo = {
     name: firstText ? getText(firstText) : '',
-    product_details: productDetailsRoot
-      ? getTextValues(productDetailsRoot).filter((value) => value !== 'Ещё')
-      : [],
+    product_details: [
+      ...parsePurchaseDetails(infoRoot),
+      ...parseFeedbackDetailLines(infoRoot)
+    ],
     feedback_reasons: feedbackReasons,
     rating: parseRating(infoRoot),
     ...parseProductInfo(root)
   }
+  const optionalMissingFields = new Set(['colors', 'size'])
   const missingFields = Object.entries(parsedInfo).flatMap(([field, value]) => {
+    if (optionalMissingFields.has(field)) {
+      return []
+    }
+
     if (typeof value === 'string' && value.trim() === '') {
       return [field]
     }
