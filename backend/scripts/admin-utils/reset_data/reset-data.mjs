@@ -100,6 +100,20 @@ function resolveEnvProfile(config) {
   return { name: null, files: config.useEnv };
 }
 
+function normalizePublicTableConfig(table) {
+  if (typeof table === "string") {
+    return {
+      name: table,
+      deleteColumn: "id",
+    };
+  }
+
+  return {
+    name: table.name,
+    deleteColumn: table.deleteColumn ?? "id",
+  };
+}
+
 async function loadConfig() {
   const explicitConfigArg = process.argv
     .slice(2)
@@ -375,34 +389,35 @@ async function deleteAuthUsers(supabase) {
   return deleted;
 }
 
-async function deletePublicTableRows(supabase, table) {
+async function deletePublicTableRows(supabase, tableConfig) {
+  const table = normalizePublicTableConfig(tableConfig);
   const { error, count } = await supabase
-    .from(table)
+    .from(table.name)
     .delete({ count: "exact" })
     .not("created_at", "is", null);
 
   if (!error) {
-    return { table, deleted: count ?? null };
+    return { table: table.name, deleted: count ?? null };
   }
 
   if (isMissingTableError(error)) {
-    return { table, skipped: true, reason: "table does not exist" };
+    return { table: table.name, skipped: true, reason: "table does not exist" };
   }
 
   const fallback = await supabase
-    .from(table)
+    .from(table.name)
     .delete({ count: "exact" })
-    .not("id", "is", null);
+    .not(table.deleteColumn, "is", null);
 
   if (isMissingTableError(fallback.error)) {
-    return { table, skipped: true, reason: "table does not exist" };
+    return { table: table.name, skipped: true, reason: "table does not exist" };
   }
 
   if (fallback.error) {
     throw fallback.error;
   }
 
-  return { table, deleted: fallback.count ?? null };
+  return { table: table.name, deleted: fallback.count ?? null };
 }
 
 async function resetSupabaseData(config) {
@@ -413,8 +428,9 @@ async function resetSupabaseData(config) {
   const supabase = getSupabaseAdminClient();
   const tables = [];
 
-  for (const table of config.dataReset.publicTables) {
-    console.log(`Clearing table ${table}...`);
+  for (const tableConfig of config.dataReset.publicTables) {
+    const table = normalizePublicTableConfig(tableConfig);
+    console.log(`Clearing table ${table.name}...`);
     tables.push(await deletePublicTableRows(supabase, table));
   }
 

@@ -31,7 +31,7 @@ useSqlFiles: [
 
 The script also clears the configured S3-compatible storage bucket and flushes the Redis DB from `REDIS_URL`.
 
-If SQL execution is skipped, the script falls back to service-role data cleanup: it clears the configured public app tables and deletes auth users through the Supabase Admin API. The fallback table list is ordered child-first and currently includes workspace data, admin rows, AI provider/prompt profiles, extension API keys, extension users, generation requests/events, and extension error logs.
+If SQL execution is skipped, the script falls back to service-role data cleanup: it clears the configured public app tables and deletes auth users through the Supabase Admin API. The fallback table list is ordered child-first and currently includes workspace data, admin rows, AI provider/prompt profiles, extension API keys, extension users, generation requests/events, and extension error logs. Tables without an `id` column use a configured `deleteColumn` for fallback deletion, for example `admins.email` and `extension_api_key_users.api_key_id`.
 
 The last run result is written to `last-run.json` in this folder.
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## Reset utility fallback delete columns
+
+Problem: when SQL execution was unavailable, the reset utility fell back to service-role table cleanup and assumed every table could be deleted through an `id` column. Current schema tables such as `extension_api_key_users` and `admins` do not have an `id` column, so fallback reset failed.
+
+Solution: allowed reset table config entries to define a fallback `deleteColumn`, configured non-`id` tables with their primary-key columns, and kept string table entries defaulting to `id`.
+
 ## Admin utility environment profiles
 
 Problem: reset and snapshot admin utilities hard-coded one configured `useEnv` list, so switching between E2E, local development, and production-like environment files required editing config files.
