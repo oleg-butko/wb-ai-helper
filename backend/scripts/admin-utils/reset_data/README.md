@@ -3,20 +3,22 @@
 Run from the project root:
 
 ```sh
-node scripts/admin-utils/reset_data/reset-data.mjs --yes
+node scripts/admin-utils/reset_data/reset-data.mjs e2e --yes
 ```
 
-The default `config.mjs` loads E2E env files:
+The command accepts an environment profile:
 
-```js
-useEnv: [".env.api.e2e.local", ".env.e2e.local"]
+```sh
+node scripts/admin-utils/reset_data/reset-data.mjs [e2e|dev|prod] --yes
 ```
 
-For local dev, change it to:
+The built-in profiles load:
 
-```js
-useEnv: [".env.api.local", ".env.local"]
-```
+- `e2e`: `.env.api.e2e.local`, `.env.e2e.local`
+- `dev`: `.env.api.local`, `.env.local`
+- `prod`: `.env.api.prod.local`, `.env.prod.local`
+
+If the profile is omitted, `e2e` is used.
 
 `useSqlFiles` is ordered. The default reset runs:
 

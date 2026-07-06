@@ -16,7 +16,15 @@ import defaultConfig from "./config.mjs";
 import { loadEnvFiles } from "../../load-env.mjs";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
-const args = new Set(process.argv.slice(2));
+const argv = process.argv.slice(2);
+const positionalArgs = argv.filter((arg) => !arg.startsWith("--"));
+const envProfileArg = positionalArgs[0] ?? null;
+const args = new Set(argv.filter((arg) => arg.startsWith("--")));
+const defaultEnvProfiles = {
+  e2e: [".env.api.e2e.local", ".env.e2e.local"],
+  dev: [".env.api.local", ".env.local"],
+  prod: [".env.api.prod.local", ".env.prod.local"],
+};
 
 function resolveProjectPath(projectRoot, value) {
   return path.isAbsolute(value) ? value : path.join(projectRoot, value);
@@ -24,10 +32,16 @@ function resolveProjectPath(projectRoot, value) {
 
 function normalizeConfig(config) {
   const projectRoot = config.projectRoot ?? path.resolve(scriptDir, "../../../");
+  const envProfiles = {
+    ...defaultEnvProfiles,
+    ...(config.envProfiles ?? {}),
+  };
 
   return {
     ...config,
     projectRoot,
+    defaultEnvProfile: config.defaultEnvProfile ?? "e2e",
+    envProfiles,
     useEnv: config.useEnv ?? [],
     useSqlFiles: config.useSqlFiles ?? [],
     sql: {
@@ -64,6 +78,26 @@ function normalizeConfig(config) {
     },
     logFile: config.logFile ?? "last-run.json",
   };
+}
+
+function resolveEnvProfile(config) {
+  if (envProfileArg) {
+    const files = config.envProfiles[envProfileArg];
+
+    if (!files) {
+      throw new Error(`Unknown environment profile "${envProfileArg}". Expected one of: ${Object.keys(config.envProfiles).join(", ")}.`);
+    }
+
+    return { name: envProfileArg, files };
+  }
+
+  const files = config.envProfiles[config.defaultEnvProfile];
+
+  if (files) {
+    return { name: config.defaultEnvProfile, files };
+  }
+
+  return { name: null, files: config.useEnv };
 }
 
 async function loadConfig() {
@@ -529,7 +563,8 @@ async function main() {
     finishedAt: null,
     ok: false,
     config: {
-      useEnv: config.useEnv,
+      envProfile: null,
+      useEnv: [],
       useSqlFiles: config.useSqlFiles,
       storage: config.storage,
       redis: config.redis,
@@ -539,12 +574,16 @@ async function main() {
   };
 
   try {
+    const envProfile = resolveEnvProfile(config);
+    log.config.envProfile = envProfile.name;
+    log.config.useEnv = envProfile.files;
+
     if (!args.has("--yes")) {
       throw new Error("Refusing to reset data without --yes.");
     }
 
     loadEnvFiles(
-      config.useEnv.map((file) => resolveProjectPath(config.projectRoot, file)),
+      envProfile.files.map((file) => resolveProjectPath(config.projectRoot, file)),
       { override: true },
     );
 

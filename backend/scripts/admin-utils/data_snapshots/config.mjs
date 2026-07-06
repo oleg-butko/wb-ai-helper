@@ -8,7 +8,12 @@ const projectRoot = path.resolve(
 
 export default {
   projectRoot,
-  useEnv: [".env.api.e2e.local", ".env.e2e.local"],
+  defaultEnvProfile: "e2e",
+  envProfiles: {
+    e2e: [".env.api.e2e.local", ".env.e2e.local"],
+    dev: [".env.api.local", ".env.local"],
+    prod: [".env.api.prod.local", ".env.prod.local"],
+  },
   snapshotsDir: "scripts/admin-utils/data_snapshots/snapshots",
   logFile: "last-run.json",
   auth: {

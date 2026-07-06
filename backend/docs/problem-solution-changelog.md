@@ -1,5 +1,11 @@
 # Changelog
 
+## Admin utility environment profiles
+
+Problem: reset and snapshot admin utilities hard-coded one configured `useEnv` list, so switching between E2E, local development, and production-like environment files required editing config files.
+
+Solution: added positional environment profiles to the admin utility CLIs. Snapshot commands now accept `save|restore [e2e|dev|prod]`, reset accepts `[e2e|dev|prod] --yes`, and the built-in profiles map to the matching `.env.api.*` plus `.env.*` file pairs while defaulting to `e2e` when omitted.
+
 ## Admin utility schema coverage
 
 Problem: the reset and data snapshot admin utilities still used the older workspace-only table lists, so they missed admins, AI provider/prompt profiles, extension API keys, extension users, generation history, and error logs.

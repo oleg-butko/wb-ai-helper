@@ -8,7 +8,12 @@ const projectRoot = path.resolve(
 
 export default {
   projectRoot,
-  useEnv: [".env.api.e2e.local", ".env.e2e.local"],
+  defaultEnvProfile: "e2e",
+  envProfiles: {
+    e2e: [".env.api.e2e.local", ".env.e2e.local"],
+    dev: [".env.api.local", ".env.local"],
+    prod: [".env.api.prod.local", ".env.prod.local"],
+  },
   useSqlFiles: [
     "docs/SQL/reset-supabase-full.sql",
     "docs/SQL/bootstrap-supabase-initial.sql",

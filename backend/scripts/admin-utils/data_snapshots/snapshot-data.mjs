@@ -17,8 +17,15 @@ import { loadEnvFiles } from "../../load-env.mjs";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const argv = process.argv.slice(2);
-const command = argv.find((arg) => !arg.startsWith("--")) ?? "save";
+const positionalArgs = argv.filter((arg) => !arg.startsWith("--"));
+const command = positionalArgs[0] ?? "save";
+const envProfileArg = positionalArgs[1] ?? null;
 const args = new Set(argv.filter((arg) => arg.startsWith("--")));
+const defaultEnvProfiles = {
+  e2e: [".env.api.e2e.local", ".env.e2e.local"],
+  dev: [".env.api.local", ".env.local"],
+  prod: [".env.api.prod.local", ".env.prod.local"],
+};
 
 function getArgValue(name) {
   return argv.find((arg) => arg.startsWith(`${name}=`))?.slice(name.length + 1) ?? null;
@@ -30,10 +37,16 @@ function resolveProjectPath(projectRoot, value) {
 
 function normalizeConfig(config) {
   const projectRoot = config.projectRoot ?? path.resolve(scriptDir, "../../../");
+  const envProfiles = {
+    ...defaultEnvProfiles,
+    ...(config.envProfiles ?? {}),
+  };
 
   return {
     ...config,
     projectRoot,
+    defaultEnvProfile: config.defaultEnvProfile ?? "e2e",
+    envProfiles,
     useEnv: config.useEnv ?? [],
     snapshotsDir: config.snapshotsDir ?? "scripts/admin-utils/data_snapshots/snapshots",
     logFile: config.logFile ?? "last-run.json",
@@ -58,6 +71,26 @@ function normalizeConfig(config) {
       ...(config.storage ?? {}),
     },
   };
+}
+
+function resolveEnvProfile(config) {
+  if (envProfileArg) {
+    const files = config.envProfiles[envProfileArg];
+
+    if (!files) {
+      throw new Error(`Unknown environment profile "${envProfileArg}". Expected one of: ${Object.keys(config.envProfiles).join(", ")}.`);
+    }
+
+    return { name: envProfileArg, files };
+  }
+
+  const files = config.envProfiles[config.defaultEnvProfile];
+
+  if (files) {
+    return { name: config.defaultEnvProfile, files };
+  }
+
+  return { name: null, files: config.useEnv };
 }
 
 async function loadConfig() {
@@ -615,6 +648,8 @@ async function main() {
   const config = await loadConfig();
   const log = {
     command,
+    envProfile: null,
+    useEnv: [],
     startedAt: new Date().toISOString(),
     finishedAt: null,
     ok: false,
@@ -622,9 +657,13 @@ async function main() {
   };
 
   try {
+    const envProfile = resolveEnvProfile(config);
+    log.envProfile = envProfile.name;
+    log.useEnv = envProfile.files;
+
     if (command !== "list") {
       loadEnvFiles(
-        config.useEnv.map((file) => resolveProjectPath(config.projectRoot, file)),
+        envProfile.files.map((file) => resolveProjectPath(config.projectRoot, file)),
         { override: true },
       );
       requireEnv("NEXT_PUBLIC_SUPABASE_URL");

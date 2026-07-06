@@ -5,7 +5,7 @@ Run from the project root.
 Save a snapshot:
 
 ```sh
-node scripts/admin-utils/data_snapshots/snapshot-data.mjs save
+node scripts/admin-utils/data_snapshots/snapshot-data.mjs save e2e
 ```
 
 List snapshots:
@@ -17,7 +17,7 @@ node scripts/admin-utils/data_snapshots/snapshot-data.mjs list
 Restore a snapshot:
 
 ```sh
-node scripts/admin-utils/data_snapshots/snapshot-data.mjs restore --snapshot=2026-06-18_170530 --yes
+node scripts/admin-utils/data_snapshots/snapshot-data.mjs restore e2e --snapshot=2026-06-18_170530 --yes
 ```
 
 Snapshots are saved under `snapshots/` in this folder by default. That generated folder is ignored by git.
@@ -29,6 +29,21 @@ Snapshot folders are named with local date-time including seconds, for example:
 ```
 
 Each table is saved as one pretty-printed JSON file under `tables/`, with keys and rows sorted for easier diffs.
+
+Commands that connect to Supabase accept an environment profile after the command:
+
+```sh
+node scripts/admin-utils/data_snapshots/snapshot-data.mjs save [e2e|dev|prod]
+node scripts/admin-utils/data_snapshots/snapshot-data.mjs restore [e2e|dev|prod] --snapshot=... --yes
+```
+
+The built-in profiles load:
+
+- `e2e`: `.env.api.e2e.local`, `.env.e2e.local`
+- `dev`: `.env.api.local`, `.env.local`
+- `prod`: `.env.api.prod.local`, `.env.prod.local`
+
+If the profile is omitted, `e2e` is used.
 
 The default snapshot also writes:
 
