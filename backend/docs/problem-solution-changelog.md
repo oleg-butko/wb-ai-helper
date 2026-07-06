@@ -1,5 +1,11 @@
 # Changelog
 
+## Admin utility schema coverage
+
+Problem: the reset and data snapshot admin utilities still used the older workspace-only table lists, so they missed admins, AI provider/prompt profiles, extension API keys, extension users, generation history, and error logs.
+
+Solution: updated the reset fallback table cleanup and snapshot save/restore configuration to cover the current schema with dependency-safe delete/insert order, composite conflict keys for extension API-key users, and documentation about sensitive snapshot contents.
+
 ## Protect default prompt profile in the editor
 
 Problem: admins could overwrite the seeded `Default review response prompt` profile from the prompt editor, making it easy to lose the baseline prompt.
