@@ -436,18 +436,21 @@ async function saveSnapshot(config) {
   return { snapshotName, snapshotDir, steps };
 }
 
-async function deleteTableRows(supabase, table) {
+async function deleteTableRows(supabase, tableConfig) {
+  const table = typeof tableConfig === "string"
+    ? { name: tableConfig, deleteColumn: "id" }
+    : { deleteColumn: "id", ...tableConfig };
   const { error, count } = await supabase
-    .from(table)
+    .from(table.name)
     .delete({ count: "exact" })
-    .not("id", "is", null);
+    .not(table.deleteColumn, "is", null);
 
   if (!error) {
-    return { table, deleted: count ?? null };
+    return { table: table.name, deleted: count ?? null };
   }
 
   if (error.code === "42P01" || error.code === "PGRST205") {
-    return { table, skipped: true, reason: "table does not exist" };
+    return { table: table.name, skipped: true, reason: "table does not exist" };
   }
 
   throw error;
@@ -596,8 +599,11 @@ async function restoreSnapshot(config) {
   const snapshotDir = resolveProjectPath(config.projectRoot, path.join(config.snapshotsDir, snapshotName));
   const steps = [];
 
-  for (const table of config.restore.deleteOrder) {
-    steps.push({ type: "delete-table", ...(await deleteTableRows(supabase, table)) });
+  for (const tableName of config.restore.deleteOrder) {
+    steps.push({
+      type: "delete-table",
+      ...(await deleteTableRows(supabase, findTableConfig(config, tableName))),
+    });
   }
 
   if (config.auth.enabled && config.auth.restoreUsers) {

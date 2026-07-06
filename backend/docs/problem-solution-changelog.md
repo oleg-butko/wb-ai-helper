@@ -1,5 +1,11 @@
 # Changelog
 
+## Snapshot restore delete columns
+
+Problem: snapshot restore deleted existing table rows with an `id` filter for every table, so restoring current-schema snapshots failed on tables without an `id` column such as `extension_api_key_users` and `admins`.
+
+Solution: added per-table `deleteColumn` support to snapshot restore and configured non-`id` tables with their primary-key delete columns while preserving their existing conflict columns for upsert.
+
 ## Reset utility fallback delete columns
 
 Problem: when SQL execution was unavailable, the reset utility fell back to service-role table cleanup and assumed every table could be deleted through an `id` column. Current schema tables such as `extension_api_key_users` and `admins` do not have an `id` column, so fallback reset failed.

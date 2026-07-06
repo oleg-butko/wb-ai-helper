@@ -53,6 +53,8 @@ The default snapshot also writes:
 
 The default table list covers the current app schema: workspace data, `admins`, AI provider/prompt profiles, extension API keys, quota events, extension users, generation requests/events, and extension error logs. Snapshot files can contain sensitive data such as provider API keys, hashed extension API keys, request payloads, response payloads, and error details; keep generated snapshots out of git.
 
+Restore deletion uses each table's configured `deleteColumn`; tables without an `id` column use primary-key columns such as `admins.email` and `extension_api_key_users.api_key_id`.
+
 Storage object bodies are not saved by default because they are often binary and not useful for human-readable diffs. Set `storage.saveObjectBodies: true` in `config.mjs` to store object bodies as base64 files and enable storage body restore.
 
 Auth restore uses the Supabase Admin API. It attempts to recreate users with their original IDs and a configured placeholder password. This works for self-hosted setups that accept `id` in the admin create-user payload; passwords from the original snapshot are not recoverable from Supabase.
