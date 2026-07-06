@@ -1,5 +1,11 @@
 # Changelog
 
+## Prompt profile default detection and unique labels
+
+Problem: the prompt editor treated any profile named `Default review response prompt` as the default profile, so a newly created prompt copied from the default label could lose its `Save` button. Prompt labels were also not enforced as unique.
+
+Solution: added an explicit `isDefault` API field computed from the seeded default row metadata, switched the UI to hide `Save` only for that default row, added service/API duplicate-label handling with a 409 response, and added case-insensitive trimmed unique label indexes to the SQL scripts.
+
 ## Snapshot restore delete columns
 
 Problem: snapshot restore deleted existing table rows with an `id` filter for every table, so restoring current-schema snapshots failed on tables without an `id` column such as `extension_api_key_users` and `admins`.

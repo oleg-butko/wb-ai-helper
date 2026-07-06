@@ -22,6 +22,13 @@ function mapAdminAiPromptProfileError(error, reply) {
     });
   }
 
+  if (error?.code === "admin_ai_prompt_profile_label_conflict") {
+    return reply.code(409).send({
+      error: "admin_ai_prompt_profile_label_conflict",
+      message: "An AI prompt profile with this label already exists.",
+    });
+  }
+
   if (error?.name === "ZodError") {
     return reply.code(400).send({
       error: "admin_ai_prompt_profile_invalid",

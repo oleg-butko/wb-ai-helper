@@ -84,8 +84,8 @@ await runCase("admin prompt editor protects the default profile from direct save
     "utf8",
   );
 
-  assert.match(source, /const defaultPromptProfileLabel = "Default review response prompt"/);
-  assert.match(source, /const isDefaultProfileSelected = selectedProfile\?\.label === defaultPromptProfileLabel/);
+  assert.match(source, /defaultPromptProfileLabel/);
+  assert.match(source, /const isDefaultProfileSelected = Boolean\(selectedProfile\?\.isDefault\)/);
   assert.match(source, /isDefaultProfileSelected \? null : \(/);
   assert.match(source, /variant=\{isDefaultProfileSelected \? "filled" : "light"\}/);
 });

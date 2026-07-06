@@ -20,6 +20,7 @@ function createProfile(overrides = {}) {
     productDetailsTemplate: defaultProductDetailsTemplate,
     examplePayload: defaultPromptExamplePayload,
     isActive: true,
+    isDefault: false,
     createdAt: "2026-06-25T00:00:00.000Z",
     updatedAt: "2026-06-25T00:00:00.000Z",
     ...overrides,
@@ -147,6 +148,41 @@ await runCase("POST /v1/admin/ai-prompt-profiles creates a prompt profile", asyn
     assert.equal(response.json().profile.label, "Prompt v2");
     assert.equal(response.json().profile.isActive, false);
     assert.equal(calls[0].adminUserId, adminUserId);
+  } finally {
+    await app.close();
+  }
+});
+
+await runCase("POST /v1/admin/ai-prompt-profiles rejects duplicate labels", async () => {
+  const app = buildApiApp({
+    services: createServices({
+      async createAdminAiPromptProfile() {
+        const error = new Error("An AI prompt profile with this label already exists.");
+        error.code = "admin_ai_prompt_profile_label_conflict";
+        throw error;
+      },
+    }),
+  });
+
+  try {
+    const response = await app.inject({
+      method: "POST",
+      url: "/v1/admin/ai-prompt-profiles",
+      headers: {
+        authorization: "Bearer valid-token",
+      },
+      payload: {
+        label: "Default review response prompt",
+        systemPrompt: defaultSystemPrompt,
+        productDetailsTemplate: defaultProductDetailsTemplate,
+        examplePayload: defaultPromptExamplePayload,
+      },
+    });
+    const payload = response.json();
+
+    assert.equal(response.statusCode, 409);
+    assert.equal(payload.error, "admin_ai_prompt_profile_label_conflict");
+    assert.equal(payload.message, "An AI prompt profile with this label already exists.");
   } finally {
     await app.close();
   }

@@ -36,6 +36,20 @@ await runCase("AI profile activation RPCs qualify is_active column references", 
   }
 });
 
+await runCase("AI prompt profile labels are unique in SQL scripts", async () => {
+  const sqlFiles = [
+    "../../docs/SQL/bootstrap-supabase-initial.sql",
+    "../../docs/SQL/extension-api.sql",
+  ];
+
+  for (const sqlFile of sqlFiles) {
+    const sql = await readFile(new URL(sqlFile, import.meta.url), "utf8");
+
+    assert.match(sql, /create unique index if not exists ai_prompt_profiles_label_unique_idx/i);
+    assert.match(sql, /on public\.ai_prompt_profiles \(lower\(trim\(label\)\)\)/i);
+  }
+});
+
 await runCase("extension quota RPCs qualify quota column references", async () => {
   const sqlFiles = [
     "../../docs/SQL/bootstrap-supabase-initial.sql",

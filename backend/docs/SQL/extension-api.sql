@@ -58,6 +58,9 @@ create unique index if not exists ai_prompt_profiles_one_active_idx
 on public.ai_prompt_profiles ((is_active))
 where is_active = true;
 
+create unique index if not exists ai_prompt_profiles_label_unique_idx
+on public.ai_prompt_profiles (lower(trim(label)));
+
 create index if not exists ai_prompt_profiles_created_idx
 on public.ai_prompt_profiles (created_at desc);
 

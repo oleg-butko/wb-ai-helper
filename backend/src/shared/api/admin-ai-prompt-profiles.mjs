@@ -33,6 +33,8 @@ export const defaultPromptExamplePayload = {
   size: "M",
 };
 
+export const defaultPromptProfileLabel = "Default review response prompt";
+
 export const defaultSystemPrompt =
   "You are an assistant helping a Wildberries seller write polite, concise, useful responses to customer reviews. Reply in Russian. Do not invent facts. If the review is negative, acknowledge the issue and answer professionally.";
 
@@ -62,6 +64,7 @@ export const adminAiPromptProfileSchema = z.object({
   productDetailsTemplate: z.string(),
   examplePayload: extensionParsedReviewSchema,
   isActive: z.boolean(),
+  isDefault: z.boolean(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -107,6 +110,7 @@ export const adminAiPromptProfileErrorCodeSchema = z.enum([
   "app_admin_required",
   "admin_ai_prompt_profile_not_found",
   "admin_ai_prompt_profile_invalid",
+  "admin_ai_prompt_profile_label_conflict",
   "admin_ai_prompt_profile_unknown_placeholders",
   "admin_ai_prompt_profile_list_failed",
   "admin_ai_prompt_profile_create_failed",

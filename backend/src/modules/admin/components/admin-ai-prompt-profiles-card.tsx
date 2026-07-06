@@ -11,12 +11,11 @@ import type {
 import {
   defaultProductDetailsTemplate,
   defaultPromptExamplePayload,
+  defaultPromptProfileLabel,
   defaultSystemPrompt,
 } from "@/shared/api/admin-ai-prompt-profiles";
 
 type PromptProfile = AdminAiPromptProfileListResponse["profiles"][number];
-
-const defaultPromptProfileLabel = "Default review response prompt";
 
 function isObject(payload: unknown): payload is Record<string, unknown> {
   return typeof payload === "object" && payload !== null;
@@ -59,7 +58,7 @@ export function AdminAiPromptProfilesCard() {
   const [loading, setLoading] = useState(false);
 
   const selectedProfile = profiles.find((profile) => profile.id === selectedProfileId) ?? null;
-  const isDefaultProfileSelected = selectedProfile?.label === defaultPromptProfileLabel;
+  const isDefaultProfileSelected = Boolean(selectedProfile?.isDefault);
   const profileOptions = useMemo(
     () => profiles.map((profile) => ({
       value: profile.id,

@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 
 import { createClient } from "@supabase/supabase-js";
 
+import { defaultPromptProfileLabel } from "../../src/shared/api/admin-ai-prompt-profiles.mjs";
 import { assertApiEnv, getApiConfig } from "../config.mjs";
 
 const workspaceFileBaseSelect =
@@ -175,9 +176,35 @@ function mapAiPromptProfileRecord(item) {
     productDetailsTemplate: item.product_details_template,
     examplePayload: item.example_payload,
     isActive: Boolean(item.is_active),
+    isDefault: item.label === defaultPromptProfileLabel && item.created_by_admin_user_id === null,
     createdAt: item.created_at,
     updatedAt: item.updated_at,
   };
+}
+
+async function assertUniqueAiPromptProfileLabel({ adminClient, label, excludeProfileId }) {
+  const normalizedLabel = label.trim().toLowerCase();
+  const { data, error } = await adminClient
+    .from("ai_prompt_profiles")
+    .select("id, label");
+
+  if (error) {
+    throw error;
+  }
+
+  const conflictingProfile = (data ?? []).find((item) => {
+    if (excludeProfileId && item.id === excludeProfileId) {
+      return false;
+    }
+
+    return item.label.trim().toLowerCase() === normalizedLabel;
+  });
+
+  if (conflictingProfile) {
+    const conflictError = new Error("An AI prompt profile with this label already exists.");
+    conflictError.code = "admin_ai_prompt_profile_label_conflict";
+    throw conflictError;
+  }
 }
 
 function mapExtensionApiKeyRecord(item) {
@@ -1268,7 +1295,7 @@ export function createApiServices(config = getApiConfig(), overrides = {}) {
     async listAdminAiPromptProfiles() {
       const { data, error } = await adminClient
         .from("ai_prompt_profiles")
-        .select("id, label, system_prompt, product_details_template, example_payload, is_active, created_at, updated_at")
+        .select("id, label, system_prompt, product_details_template, example_payload, is_active, created_by_admin_user_id, created_at, updated_at")
         .order("is_active", { ascending: false })
         .order("created_at", { ascending: false });
 
@@ -1285,6 +1312,8 @@ export function createApiServices(config = getApiConfig(), overrides = {}) {
       examplePayload,
       adminUserId,
     }) {
+      await assertUniqueAiPromptProfileLabel({ adminClient, label });
+
       const { data, error } = await adminClient
         .from("ai_prompt_profiles")
         .insert({
@@ -1295,7 +1324,7 @@ export function createApiServices(config = getApiConfig(), overrides = {}) {
           created_by_admin_user_id: adminUserId,
           updated_by_admin_user_id: adminUserId,
         })
-        .select("id, label, system_prompt, product_details_template, example_payload, is_active, created_at, updated_at")
+        .select("id, label, system_prompt, product_details_template, example_payload, is_active, created_by_admin_user_id, created_at, updated_at")
         .single();
 
       if (error) {
@@ -1315,6 +1344,11 @@ export function createApiServices(config = getApiConfig(), overrides = {}) {
       const patch = {};
 
       if (label !== undefined) {
+        await assertUniqueAiPromptProfileLabel({
+          adminClient,
+          label,
+          excludeProfileId: profileId,
+        });
         patch.label = label.trim();
       }
 
@@ -1338,7 +1372,7 @@ export function createApiServices(config = getApiConfig(), overrides = {}) {
         .from("ai_prompt_profiles")
         .update(patch)
         .eq("id", profileId)
-        .select("id, label, system_prompt, product_details_template, example_payload, is_active, created_at, updated_at")
+        .select("id, label, system_prompt, product_details_template, example_payload, is_active, created_by_admin_user_id, created_at, updated_at")
         .maybeSingle();
 
       if (error) {
@@ -1356,7 +1390,7 @@ export function createApiServices(config = getApiConfig(), overrides = {}) {
     async getAdminAiPromptProfile({ profileId }) {
       const { data, error } = await adminClient
         .from("ai_prompt_profiles")
-        .select("id, label, system_prompt, product_details_template, example_payload, is_active, created_at, updated_at")
+        .select("id, label, system_prompt, product_details_template, example_payload, is_active, created_by_admin_user_id, created_at, updated_at")
         .eq("id", profileId)
         .maybeSingle();
 
@@ -1369,7 +1403,7 @@ export function createApiServices(config = getApiConfig(), overrides = {}) {
     async getActiveAiPromptProfile() {
       const { data, error } = await adminClient
         .from("ai_prompt_profiles")
-        .select("id, label, system_prompt, product_details_template, example_payload, is_active, created_at, updated_at")
+        .select("id, label, system_prompt, product_details_template, example_payload, is_active, created_by_admin_user_id, created_at, updated_at")
         .eq("is_active", true)
         .maybeSingle();
 
