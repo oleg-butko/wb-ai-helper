@@ -78,6 +78,18 @@ await runCase("admin prompt preview does not force a light background", async ()
   assert.match(source, /Rendered product_details prompt/);
 });
 
+await runCase("admin prompt editor protects the default profile from direct saves", async () => {
+  const source = await readFile(
+    new URL("../../src/modules/admin/components/admin-ai-prompt-profiles-card.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /const defaultPromptProfileLabel = "Default review response prompt"/);
+  assert.match(source, /const isDefaultProfileSelected = selectedProfile\?\.label === defaultPromptProfileLabel/);
+  assert.match(source, /isDefaultProfileSelected \? null : \(/);
+  assert.match(source, /variant=\{isDefaultProfileSelected \? "filled" : "light"\}/);
+});
+
 await runCase("extension user persistence is idempotent for repeated user_id calls", async () => {
   const source = await readFile(new URL("../../api/services/supabase.mjs", import.meta.url), "utf8");
 

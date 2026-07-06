@@ -1,5 +1,11 @@
 # Changelog
 
+## Protect default prompt profile in the editor
+
+Problem: admins could overwrite the seeded `Default review response prompt` profile from the prompt editor, making it easy to lose the baseline prompt.
+
+Solution: when the default prompt profile is selected, hide the `Save` action and make `Create as new` the primary action so edits are saved as a new profile instead of overwriting the default.
+
 ## Extension prompt payload diagnostics and optional characteristics
 
 Problem: the admin prompt preview could look correct while real generation used different parsed JSON from the extension, and products without color or size characteristics should not be rejected or treated as parser failures.

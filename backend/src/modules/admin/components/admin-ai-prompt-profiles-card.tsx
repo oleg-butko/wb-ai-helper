@@ -16,6 +16,8 @@ import {
 
 type PromptProfile = AdminAiPromptProfileListResponse["profiles"][number];
 
+const defaultPromptProfileLabel = "Default review response prompt";
+
 function isObject(payload: unknown): payload is Record<string, unknown> {
   return typeof payload === "object" && payload !== null;
 }
@@ -47,7 +49,7 @@ function formatJson(payload: unknown) {
 export function AdminAiPromptProfilesCard() {
   const [profiles, setProfiles] = useState<PromptProfile[]>([]);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
-  const [label, setLabel] = useState("Default review response prompt");
+  const [label, setLabel] = useState(defaultPromptProfileLabel);
   const [systemPrompt, setSystemPrompt] = useState(defaultSystemPrompt);
   const [productDetailsTemplate, setProductDetailsTemplate] = useState(defaultProductDetailsTemplate);
   const [exampleJson, setExampleJson] = useState(formatJson(defaultPromptExamplePayload));
@@ -57,6 +59,7 @@ export function AdminAiPromptProfilesCard() {
   const [loading, setLoading] = useState(false);
 
   const selectedProfile = profiles.find((profile) => profile.id === selectedProfileId) ?? null;
+  const isDefaultProfileSelected = selectedProfile?.label === defaultPromptProfileLabel;
   const profileOptions = useMemo(
     () => profiles.map((profile) => ({
       value: profile.id,
@@ -284,8 +287,16 @@ export function AdminAiPromptProfilesCard() {
               onChange={(event) => setProductDetailsTemplate(event.currentTarget.value)}
             />
             <Group>
-              <Button loading={loading} onClick={saveProfile} disabled={!selectedProfileId}>Save</Button>
-              <Button variant="light" loading={loading} onClick={createProfile}>Create as new</Button>
+              {isDefaultProfileSelected ? null : (
+                <Button loading={loading} onClick={saveProfile} disabled={!selectedProfileId}>Save</Button>
+              )}
+              <Button
+                variant={isDefaultProfileSelected ? "filled" : "light"}
+                loading={loading}
+                onClick={createProfile}
+              >
+                Create as new
+              </Button>
               <Button color="green" loading={loading} onClick={activateProfile} disabled={!selectedProfileId || selectedProfile?.isActive}>Activate</Button>
             </Group>
           </Stack>
