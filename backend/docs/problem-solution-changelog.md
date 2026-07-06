@@ -1,5 +1,11 @@
 # Changelog
 
+## Remove duplicate extension API SQL script
+
+Problem: `docs/SQL/extension-api.sql` duplicated schema already maintained in `bootstrap-supabase-initial.sql`, which created an extra file to keep in sync.
+
+Solution: removed the duplicate standalone SQL file, updated tests to validate only `bootstrap-supabase-initial.sql`, and cleaned stale documentation references.
+
 ## Prompt profile default detection and unique labels
 
 Problem: the prompt editor treated any profile named `Default review response prompt` as the default profile, so a newly created prompt copied from the default label could lose its `Save` button. Prompt labels were also not enforced as unique.
@@ -98,7 +104,7 @@ Solution: added admin-table-guarded Fastify API-key routes, shared admin contrac
 
 ## Supabase reset/bootstrap coverage
 
-Problem: the standalone extension API SQL existed, but the full reset/bootstrap scripts used from Supabase Studio did not yet include the new extension/admin API-key schema.
+Problem: the full reset/bootstrap scripts used from Supabase Studio needed to include the extension/admin API-key schema.
 
 Solution: updated `reset-supabase-full.sql` to drop the extension tables/functions and embedded the extension/admin API-key schema plus quota RPCs into `bootstrap-supabase-initial.sql`.
 

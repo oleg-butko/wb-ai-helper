@@ -22,50 +22,29 @@ await runCase("full reset removes transactional ownership transfer RPC", async (
 });
 
 await runCase("AI profile activation RPCs qualify is_active column references", async () => {
-  const sqlFiles = [
-    "../../docs/SQL/bootstrap-supabase-initial.sql",
-    "../../docs/SQL/extension-api.sql",
-  ];
+  const sql = await readFile(new URL("../../docs/SQL/bootstrap-supabase-initial.sql", import.meta.url), "utf8");
 
-  for (const sqlFile of sqlFiles) {
-    const sql = await readFile(new URL(sqlFile, import.meta.url), "utf8");
-
-    assert.match(sql, /where ai_provider_profiles\.is_active = true/i);
-    assert.match(sql, /where ai_prompt_profiles\.is_active = true/i);
-    assert.doesNotMatch(sql, /where is_active = true\s+and id <> profile_id/i);
-  }
+  assert.match(sql, /where ai_provider_profiles\.is_active = true/i);
+  assert.match(sql, /where ai_prompt_profiles\.is_active = true/i);
+  assert.doesNotMatch(sql, /where is_active = true\s+and id <> profile_id/i);
 });
 
 await runCase("AI prompt profile labels are unique in SQL scripts", async () => {
-  const sqlFiles = [
-    "../../docs/SQL/bootstrap-supabase-initial.sql",
-    "../../docs/SQL/extension-api.sql",
-  ];
+  const sql = await readFile(new URL("../../docs/SQL/bootstrap-supabase-initial.sql", import.meta.url), "utf8");
 
-  for (const sqlFile of sqlFiles) {
-    const sql = await readFile(new URL(sqlFile, import.meta.url), "utf8");
-
-    assert.match(sql, /create unique index if not exists ai_prompt_profiles_label_unique_idx/i);
-    assert.match(sql, /on public\.ai_prompt_profiles \(lower\(trim\(label\)\)\)/i);
-  }
+  assert.match(sql, /create unique index if not exists ai_prompt_profiles_label_unique_idx/i);
+  assert.match(sql, /on public\.ai_prompt_profiles \(lower\(trim\(label\)\)\)/i);
 });
 
 await runCase("extension quota RPCs qualify quota column references", async () => {
-  const sqlFiles = [
-    "../../docs/SQL/bootstrap-supabase-initial.sql",
-    "../../docs/SQL/extension-api.sql",
-  ];
+  const sql = await readFile(new URL("../../docs/SQL/bootstrap-supabase-initial.sql", import.meta.url), "utf8");
 
-  for (const sqlFile of sqlFiles) {
-    const sql = await readFile(new URL(sqlFile, import.meta.url), "utf8");
-
-    assert.match(sql, /set quota_used = extension_api_keys\.quota_used \+ p_amount/i);
-    assert.match(sql, /extension_api_keys\.quota_used \+ p_amount <= extension_api_keys\.quota_total/i);
-    assert.match(sql, /set quota_total = extension_api_keys\.quota_total \+ p_delta/i);
-    assert.match(sql, /extension_api_keys\.quota_total \+ p_delta >= extension_api_keys\.quota_used/i);
-    assert.doesNotMatch(sql, /set quota_used = quota_used \+ p_amount/i);
-    assert.doesNotMatch(sql, /quota_used \+ p_amount <= quota_total/i);
-    assert.doesNotMatch(sql, /set quota_total = quota_total \+ p_delta/i);
-    assert.doesNotMatch(sql, /quota_total \+ p_delta >= quota_used/i);
-  }
+  assert.match(sql, /set quota_used = extension_api_keys\.quota_used \+ p_amount/i);
+  assert.match(sql, /extension_api_keys\.quota_used \+ p_amount <= extension_api_keys\.quota_total/i);
+  assert.match(sql, /set quota_total = extension_api_keys\.quota_total \+ p_delta/i);
+  assert.match(sql, /extension_api_keys\.quota_total \+ p_delta >= extension_api_keys\.quota_used/i);
+  assert.doesNotMatch(sql, /set quota_used = quota_used \+ p_amount/i);
+  assert.doesNotMatch(sql, /quota_used \+ p_amount <= quota_total/i);
+  assert.doesNotMatch(sql, /set quota_total = quota_total \+ p_delta/i);
+  assert.doesNotMatch(sql, /quota_total \+ p_delta >= quota_used/i);
 });

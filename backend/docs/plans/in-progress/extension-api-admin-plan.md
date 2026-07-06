@@ -23,7 +23,7 @@
   - API-key/user usage association;
   - atomic quota consumption through RPC;
   - admin lookup of a pasted raw API key by hashing it server-side.
-- Added Supabase SQL file `docs/SQL/extension-api.sql` with:
+- Added extension/admin API schema to `docs/SQL/bootstrap-supabase-initial.sql` with:
   - `admins`;
   - `extension_api_keys`;
   - `extension_api_key_quota_events`;
@@ -71,7 +71,7 @@
   - admin page at `/[locale]/admin/ai-providers`;
   - Kimi-oriented defaults (`https://api.moonshot.ai/v1`, `kimi-k2.5`);
   - server-side provider API-key storage with only masked preview returned to the browser.
-- Updated `docs/SQL/reset-supabase-full.sql`, `docs/SQL/bootstrap-supabase-initial.sql`, and `docs/SQL/extension-api.sql` with the AI-provider profile schema.
+- Updated `docs/SQL/reset-supabase-full.sql` and `docs/SQL/bootstrap-supabase-initial.sql` with the AI-provider profile schema.
 - Added one globally active AI-provider profile:
   - `ai_provider_profiles.is_active`;
   - unique partial active-profile index;
