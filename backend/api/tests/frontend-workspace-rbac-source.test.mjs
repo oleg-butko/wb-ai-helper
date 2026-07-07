@@ -87,6 +87,7 @@ await runCase("admin prompt editor protects the default profile from direct save
   assert.match(source, /defaultPromptProfileLabel/);
   assert.match(source, /const isDefaultProfileSelected = Boolean\(selectedProfile\?\.isDefault\)/);
   assert.match(source, /isDefaultProfileSelected \? null : \(/);
+  assert.match(source, /`\$\{newPromptBaseLabel\} \$\{profiles\.length\}`/);
   assert.match(source, /disabled=\{!selectedProfileId \|\| isDefaultProfileSelected\}/);
   assert.match(source, /Remove/);
   assert.match(source, /variant=\{isDefaultProfileSelected \? "filled" : "light"\}/);

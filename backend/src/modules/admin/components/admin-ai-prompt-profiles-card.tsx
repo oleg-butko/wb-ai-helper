@@ -57,8 +57,8 @@ function createNewPromptLabel(profiles: PromptProfile[]) {
     return newPromptBaseLabel;
   }
 
-  let candidate = `${newPromptBaseLabel} ${profiles.length + 1}`;
-  let nextNumber = profiles.length + 2;
+  let candidate = `${newPromptBaseLabel} ${profiles.length}`;
+  let nextNumber = profiles.length + 1;
 
   while (normalizedLabels.has(candidate.trim().toLowerCase())) {
     candidate = `${newPromptBaseLabel} ${nextNumber}`;
