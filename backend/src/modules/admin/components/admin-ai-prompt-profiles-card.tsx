@@ -17,6 +17,8 @@ import {
 
 type PromptProfile = AdminAiPromptProfileListResponse["profiles"][number];
 
+const newPromptBaseLabel = "New prompt";
+
 function isObject(payload: unknown): payload is Record<string, unknown> {
   return typeof payload === "object" && payload !== null;
 }
@@ -43,6 +45,26 @@ function isPreviewResponse(payload: unknown): payload is AdminAiPromptProfilePre
 
 function formatJson(payload: unknown) {
   return JSON.stringify(payload, null, 2);
+}
+
+function createNewPromptLabel(profiles: PromptProfile[]) {
+  const normalizedLabels = new Set(
+    profiles.map((profile) => profile.label.trim().toLowerCase()),
+  );
+
+  if (!normalizedLabels.has(newPromptBaseLabel.toLowerCase())) {
+    return newPromptBaseLabel;
+  }
+
+  let candidate = `${newPromptBaseLabel} ${profiles.length + 1}`;
+  let nextNumber = profiles.length + 2;
+
+  while (normalizedLabels.has(candidate.trim().toLowerCase())) {
+    candidate = `${newPromptBaseLabel} ${nextNumber}`;
+    nextNumber += 1;
+  }
+
+  return candidate;
 }
 
 export function AdminAiPromptProfilesCard() {
@@ -119,11 +141,12 @@ export function AdminAiPromptProfilesCard() {
     setFeedback(null);
 
     try {
+      const nextLabel = createNewPromptLabel(profiles);
       const response = await fetch("/api/admin/ai-prompt-profiles", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          label,
+          label: nextLabel,
           systemPrompt,
           productDetailsTemplate,
           examplePayload: parseExamplePayload(),
@@ -135,7 +158,7 @@ export function AdminAiPromptProfilesCard() {
         throw new Error(getPayloadMessage(payload) ?? "Could not create AI prompt profile.");
       }
 
-      setFeedback("AI prompt profile was created.");
+      setFeedback(`AI prompt profile was created as "${payload.profile.label}".`);
       await refreshProfiles(payload.profile.id);
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : "Could not create AI prompt profile.");
@@ -294,7 +317,7 @@ export function AdminAiPromptProfilesCard() {
                 loading={loading}
                 onClick={createProfile}
               >
-                Create as new
+                Create
               </Button>
               <Button color="green" loading={loading} onClick={activateProfile} disabled={!selectedProfileId || selectedProfile?.isActive}>Activate</Button>
             </Group>
