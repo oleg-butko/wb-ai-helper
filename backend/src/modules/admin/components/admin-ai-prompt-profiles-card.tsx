@@ -1,6 +1,6 @@
 "use client";
 
-import { Alert, Badge, Button, Card, Group, Select, SimpleGrid, Stack, Text, Textarea, TextInput, Title } from "@mantine/core";
+import { Alert, Badge, Box, Button, Card, Group, Progress, Select, SimpleGrid, Stack, Text, Textarea, TextInput, Title } from "@mantine/core";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type {
@@ -18,6 +18,7 @@ import {
 type PromptProfile = AdminAiPromptProfileListResponse["profiles"][number];
 
 const newPromptBaseLabel = "New prompt";
+const notificationDurationMs = 5000;
 
 function isObject(payload: unknown): payload is Record<string, unknown> {
   return typeof payload === "object" && payload !== null;
@@ -77,10 +78,13 @@ export function AdminAiPromptProfilesCard() {
   const [preview, setPreview] = useState<AdminAiPromptProfilePreviewResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [notificationProgress, setNotificationProgress] = useState(100);
   const [loading, setLoading] = useState(false);
 
   const selectedProfile = profiles.find((profile) => profile.id === selectedProfileId) ?? null;
   const isDefaultProfileSelected = Boolean(selectedProfile?.isDefault);
+  const notificationMessage = error ?? feedback;
+  const notificationColor = error ? "red" : "green";
   const profileOptions = useMemo(
     () => profiles.map((profile) => ({
       value: profile.id,
@@ -126,6 +130,36 @@ export function AdminAiPromptProfilesCard() {
       setError(loadError instanceof Error ? loadError.message : "Could not load AI prompt profiles.");
     });
   }, [refreshProfiles]);
+
+  useEffect(() => {
+    if (!notificationMessage) {
+      return undefined;
+    }
+
+    const startedAt = Date.now();
+    setNotificationProgress(100);
+
+    const intervalId = window.setInterval(() => {
+      const elapsedMs = Date.now() - startedAt;
+      const remainingProgress = Math.max(0, 100 - (elapsedMs / notificationDurationMs) * 100);
+      setNotificationProgress(remainingProgress);
+    }, 100);
+
+    const timeoutId = window.setTimeout(() => {
+      setError(null);
+      setFeedback(null);
+    }, notificationDurationMs);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.clearTimeout(timeoutId);
+    };
+  }, [notificationMessage]);
+
+  function closeNotification() {
+    setError(null);
+    setFeedback(null);
+  }
 
   function parseExamplePayload() {
     try {
@@ -297,8 +331,36 @@ export function AdminAiPromptProfilesCard() {
 
   return (
     <Stack gap="lg">
-      {error ? <Alert color="red">{error}</Alert> : null}
-      {feedback ? <Alert color="green">{feedback}</Alert> : null}
+      {notificationMessage ? (
+        <Box
+          style={{
+            left: "50%",
+            maxWidth: "calc(100vw - 32px)",
+            position: "fixed",
+            top: 20,
+            transform: "translateX(-50%)",
+            width: 520,
+            zIndex: 1000,
+          }}
+        >
+          <Alert
+            color={notificationColor}
+            radius="lg"
+            title={error ? "Action failed" : "Action completed"}
+            withCloseButton
+            onClose={closeNotification}
+          >
+            <Text size="sm">{notificationMessage}</Text>
+            <Progress
+              color={notificationColor}
+              mt="sm"
+              radius="xl"
+              size="xs"
+              value={notificationProgress}
+            />
+          </Alert>
+        </Box>
+      ) : null}
 
       <Card withBorder radius="lg" p="lg">
         <Stack gap="md">

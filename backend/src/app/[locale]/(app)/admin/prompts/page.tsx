@@ -45,12 +45,8 @@ export default async function AdminPromptsPage({ params }: PageProps) {
           surface={{
             eyebrow: "Admin",
             title: "AI prompts",
-            description: "Edit the active system prompt and the template used to construct product details from extension JSON.",
-            highlights: [
-              "One active prompt profile is used globally.",
-              "Templates use simple {{key}} placeholders.",
-              "Preview rendering does not call the AI provider.",
-            ],
+            description: "",
+            highlights: [],
           }}
         >
           <AdminAiPromptProfilesCard />

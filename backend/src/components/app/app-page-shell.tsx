@@ -77,49 +77,55 @@ export async function AppPageShell({
                     {eyebrow}
                   </Badge>
                   <Title order={1}>{title}</Title>
-                  <Text size="lg" c="dimmed" maw={760}>
-                    {description}
-                  </Text>
+                  {description ? (
+                    <Text size="lg" c="dimmed" maw={760}>
+                      {description}
+                    </Text>
+                  ) : null}
 
-                  <Group gap="lg" mt="md" align="end">
-                    <InfoStat label={dictionary.app.shared.localeLabel} value={locale.toUpperCase()} />
-                    <InfoStat
-                      label={dictionary.app.shared.surfaceLabel}
-                      value={dictionary.app.shared.surfaceValue}
-                    />
-                    <InfoStat
-                      label={dictionary.app.shared.modeLabel}
-                      value={dictionary.app.shared.modeValue}
-                    />
-                    <WorkspaceShellSwitcher dictionary={dictionary.app.shared} />
-                  </Group>
+                  {description ? (
+                    <Group gap="lg" mt="md" align="end">
+                      <InfoStat label={dictionary.app.shared.localeLabel} value={locale.toUpperCase()} />
+                      <InfoStat
+                        label={dictionary.app.shared.surfaceLabel}
+                        value={dictionary.app.shared.surfaceValue}
+                      />
+                      <InfoStat
+                        label={dictionary.app.shared.modeLabel}
+                        value={dictionary.app.shared.modeValue}
+                      />
+                      <WorkspaceShellSwitcher dictionary={dictionary.app.shared} />
+                    </Group>
+                  ) : null}
                 </Stack>
               </Card>
 
-              <Card
-                radius={24}
-                p={{ base: "lg", md: "xl" }}
-                style={{
-                  background: "var(--surface-strong)",
-                  border: "1px solid var(--line)",
-                }}
-              >
-                <Stack gap="lg">
-                  <Title order={3}>{dictionary.app.shared.highlightsTitle}</Title>
-                  <SimpleGrid cols={{ base: 1, md: 3 }} spacing="md">
-                    {highlights.map((item) => (
-                      <Card
-                        key={item}
-                        radius={18}
-                        p="lg"
-                        style={{ border: "1px solid var(--line)" }}
-                      >
-                        <Text c="dimmed">{item}</Text>
-                      </Card>
-                    ))}
-                  </SimpleGrid>
-                </Stack>
-              </Card>
+              {highlights.length > 0 ? (
+                <Card
+                  radius={24}
+                  p={{ base: "lg", md: "xl" }}
+                  style={{
+                    background: "var(--surface-strong)",
+                    border: "1px solid var(--line)",
+                  }}
+                >
+                  <Stack gap="lg">
+                    <Title order={3}>{dictionary.app.shared.highlightsTitle}</Title>
+                    <SimpleGrid cols={{ base: 1, md: 3 }} spacing="md">
+                      {highlights.map((item) => (
+                        <Card
+                          key={item}
+                          radius={18}
+                          p="lg"
+                          style={{ border: "1px solid var(--line)" }}
+                        >
+                          <Text c="dimmed">{item}</Text>
+                        </Card>
+                      ))}
+                    </SimpleGrid>
+                  </Stack>
+                </Card>
+              ) : null}
 
               {children}
             </Stack>

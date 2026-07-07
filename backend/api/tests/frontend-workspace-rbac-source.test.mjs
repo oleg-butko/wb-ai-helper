@@ -92,6 +92,36 @@ await runCase("admin prompt editor protects the default profile from direct save
   assert.match(source, /variant=\{isDefaultProfileSelected \? "filled" : "light"\}/);
 });
 
+await runCase("admin prompt page removes secondary intro blocks", async () => {
+  const pageSource = await readFile(
+    new URL("../../src/app/[locale]/(app)/admin/prompts/page.tsx", import.meta.url),
+    "utf8",
+  );
+  const shellSource = await readFile(
+    new URL("../../src/components/app/app-page-shell.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(pageSource, /description: ""/);
+  assert.match(pageSource, /highlights: \[\]/);
+  assert.doesNotMatch(pageSource, /Edit the active system prompt and the template used to construct product details/);
+  assert.match(shellSource, /highlights\.length > 0/);
+  assert.match(shellSource, /description \? \(/);
+});
+
+await runCase("admin prompt alerts float and auto close", async () => {
+  const source = await readFile(
+    new URL("../../src/modules/admin/components/admin-ai-prompt-profiles-card.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /notificationDurationMs = 5000/);
+  assert.match(source, /position: "fixed"/);
+  assert.match(source, /withCloseButton/);
+  assert.match(source, /window\.setTimeout/);
+  assert.match(source, /<Progress/);
+});
+
 await runCase("extension user persistence is idempotent for repeated user_id calls", async () => {
   const source = await readFile(new URL("../../api/services/supabase.mjs", import.meta.url), "utf8");
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## Admin prompts floating alerts and simpler header
+
+Problem: prompt editor feedback alerts were rendered inline below the page intro and were easy to miss, while the admin prompts page still showed generic workspace/context blocks that were not useful for this admin workflow.
+
+Solution: replaced inline prompt alerts with a floating top notification that can be closed manually, auto-dismisses after five seconds, and shows a remaining-time progress bar. The admin prompts page now hides the generic description, workspace info group, and highlights block.
+
 ## Prompt profile removal and short default label
 
 Problem: admins could create prompt profiles but had no UI/API path to remove obsolete custom prompts, and the seeded default prompt label was longer than needed.
