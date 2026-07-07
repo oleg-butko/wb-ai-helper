@@ -43,6 +43,7 @@ export const testSuites = {
       "api:admin-workspace-service",
       "api:admin-workspace-routes",
       "api:next-proxy:admin-workspaces",
+      "api:next-proxy:admin-ai-prompt-profiles",
       "api:next-proxy:admin-extension-api-keys",
       "api:sign-out-redirect",
       "api:auth-callback-redirect",
@@ -166,6 +167,13 @@ export const testSuites = {
   "api:next-proxy:admin-workspaces": {
     label: "test:api:next-proxy:admin-workspaces",
     ...nodeScript("scripts/run-node-with-warning-filter.mjs", "api/tests/next-admin-workspace-routes.test.mjs"),
+  },
+  "api:next-proxy:admin-ai-prompt-profiles": {
+    label: "test:api:next-proxy:admin-ai-prompt-profiles",
+    ...nodeScript(
+      "scripts/run-node-with-warning-filter.mjs",
+      "api/tests/next-admin-ai-prompt-profile-routes.test.mjs",
+    ),
   },
   "api:next-proxy:admin-extension-api-keys": {
     label: "test:api:next-proxy:admin-extension-api-keys",

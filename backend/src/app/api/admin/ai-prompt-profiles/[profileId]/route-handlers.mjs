@@ -45,14 +45,18 @@ async function forwardPromptProfileAction({
     return createInvalidSessionResponse();
   }
 
+  const headers = method === "DELETE"
+    ? authorizationHeaders
+    : {
+        ...authorizationHeaders,
+        "content-type": "application/json",
+      };
+
   const upstream = await fetchImplementation(
     `${getInternalApiUrl()}/v1/admin/ai-prompt-profiles/${encodeURIComponent(profileId)}${pathSuffix}`,
     {
       method,
-      headers: {
-        ...authorizationHeaders,
-        "content-type": "application/json",
-      },
+      headers,
       body: method === "DELETE" ? undefined : JSON.stringify(requestPayload ?? {}),
       cache: "no-store",
     },
