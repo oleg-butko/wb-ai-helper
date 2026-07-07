@@ -1,6 +1,6 @@
 "use client";
 
-import { Alert, Badge, Box, Button, Card, Group, Progress, Select, SimpleGrid, Stack, Text, Textarea, TextInput, Title } from "@mantine/core";
+import { Alert, Badge, Box, Button, Card, Group, Portal, Progress, Select, SimpleGrid, Stack, Text, Textarea, TextInput, Title } from "@mantine/core";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type {
@@ -332,34 +332,36 @@ export function AdminAiPromptProfilesCard() {
   return (
     <Stack gap="lg">
       {notificationMessage ? (
-        <Box
-          style={{
-            left: "50%",
-            maxWidth: "calc(100vw - 32px)",
-            position: "fixed",
-            top: 20,
-            transform: "translateX(-50%)",
-            width: 520,
-            zIndex: 1000,
-          }}
-        >
-          <Alert
-            color={notificationColor}
-            radius="lg"
-            title={error ? "Action failed" : "Action completed"}
-            withCloseButton
-            onClose={closeNotification}
+        <Portal>
+          <Box
+            style={{
+              left: "50%",
+              maxWidth: "calc(100vw - 32px)",
+              position: "fixed",
+              top: 20,
+              transform: "translateX(-50%)",
+              width: 520,
+              zIndex: 10000,
+            }}
           >
-            <Text size="sm">{notificationMessage}</Text>
-            <Progress
+            <Alert
               color={notificationColor}
-              mt="sm"
-              radius="xl"
-              size="xs"
-              value={notificationProgress}
-            />
-          </Alert>
-        </Box>
+              radius="lg"
+              title={error ? "Action failed" : "Action completed"}
+              withCloseButton
+              onClose={closeNotification}
+            >
+              <Text size="sm">{notificationMessage}</Text>
+              <Progress
+                color={notificationColor}
+                mt="sm"
+                radius="xl"
+                size="xs"
+                value={notificationProgress}
+              />
+            </Alert>
+          </Box>
+        </Portal>
       ) : null}
 
       <Card withBorder radius="lg" p="lg">

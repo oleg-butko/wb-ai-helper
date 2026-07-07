@@ -116,7 +116,9 @@ await runCase("admin prompt alerts float and auto close", async () => {
   );
 
   assert.match(source, /notificationDurationMs = 5000/);
+  assert.match(source, /Portal/);
   assert.match(source, /position: "fixed"/);
+  assert.match(source, /zIndex: 10000/);
   assert.match(source, /withCloseButton/);
   assert.match(source, /window\.setTimeout/);
   assert.match(source, /<Progress/);
