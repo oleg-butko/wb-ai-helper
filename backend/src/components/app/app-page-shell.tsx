@@ -1,4 +1,4 @@
-import { Badge, Box, Card, Container, Group, Paper, SimpleGrid, Stack, Text, Title } from "@mantine/core";
+import { Badge, Box, Card, Container, Group, Paper, Stack, Text, Title } from "@mantine/core";
 import type { ReactNode } from "react";
 
 import { getAppNavigation } from "@/core/navigation/app-navigation";
@@ -31,7 +31,6 @@ export async function AppPageShell({
   eyebrow,
   title,
   description,
-  highlights,
   user,
   children,
 }: AppPageShellProps) {
@@ -99,33 +98,6 @@ export async function AppPageShell({
                   ) : null}
                 </Stack>
               </Card>
-
-              {highlights.length > 0 ? (
-                <Card
-                  radius={24}
-                  p={{ base: "lg", md: "xl" }}
-                  style={{
-                    background: "var(--surface-strong)",
-                    border: "1px solid var(--line)",
-                  }}
-                >
-                  <Stack gap="lg">
-                    <Title order={3}>{dictionary.app.shared.highlightsTitle}</Title>
-                    <SimpleGrid cols={{ base: 1, md: 3 }} spacing="md">
-                      {highlights.map((item) => (
-                        <Card
-                          key={item}
-                          radius={18}
-                          p="lg"
-                          style={{ border: "1px solid var(--line)" }}
-                        >
-                          <Text c="dimmed">{item}</Text>
-                        </Card>
-                      ))}
-                    </SimpleGrid>
-                  </Stack>
-                </Card>
-              ) : null}
 
               {children}
             </Stack>

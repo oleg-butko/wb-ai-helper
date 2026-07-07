@@ -45,8 +45,8 @@ export default async function AdminApiKeysPage({ params }: PageProps) {
           surface={{
             eyebrow: dictionary.app.adminApiKeys.eyebrow,
             title: dictionary.app.adminApiKeys.title,
-            description: dictionary.app.adminApiKeys.description,
-            highlights: dictionary.app.adminApiKeys.highlights,
+            description: "",
+            highlights: [],
           }}
         >
           <AdminExtensionApiKeysCard dictionary={dictionary.app.adminApiKeys} />

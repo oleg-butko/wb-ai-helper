@@ -45,12 +45,8 @@ export default async function AdminAiProvidersPage({ params }: PageProps) {
           surface={{
             eyebrow: "Admin",
             title: "AI provider profiles",
-            description: "Create provider profiles, list available models, choose a default model, and run a simple connectivity check.",
-            highlights: [
-              "OpenAI-compatible base URLs are supported.",
-              "Provider API keys are stored server-side and are not returned to the browser.",
-              "Use the check action before enabling a profile for generation.",
-            ],
+            description: "",
+            highlights: [],
           }}
         >
           <AdminAiProviderProfilesCard />

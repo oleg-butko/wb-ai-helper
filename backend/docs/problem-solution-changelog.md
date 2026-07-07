@@ -1,5 +1,11 @@
 # Changelog
 
+## App page shell without highlights block
+
+Problem: the generic “What this page is designed for” highlights block was no longer useful across app pages, and the admin API-key/provider pages needed the same compact header treatment as the prompts admin page.
+
+Solution: removed the highlights card from the shared app page shell and configured the admin API-key and AI-provider pages with empty header descriptions so the locale/surface/mode/workspace info group is hidden there too.
+
 ## Admin prompts floating alerts and simpler header
 
 Problem: prompt editor feedback alerts were rendered inline below the page intro and were easy to miss, while the admin prompts page still showed generic workspace/context blocks that were not useful for this admin workflow.

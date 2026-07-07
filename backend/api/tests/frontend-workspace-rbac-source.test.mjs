@@ -19,7 +19,20 @@ await runCase("admin API key page requires database-backed admin access", async 
 
   assert.match(source, /isAdminEmail\(user\.email\)/);
   assert.match(source, /notFound\(\)/);
+  assert.match(source, /description: ""/);
+  assert.match(source, /highlights: \[\]/);
   assert.doesNotMatch(source, /APP_ADMIN_EMAILS/);
+});
+
+await runCase("admin AI provider page uses compact header", async () => {
+  const source = await readFile(
+    new URL("../../src/app/[locale]/(app)/admin/ai-providers/page.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /description: ""/);
+  assert.match(source, /highlights: \[\]/);
+  assert.doesNotMatch(source, /Create provider profiles, list available models/);
 });
 
 await runCase("app navigation includes API-key admin link only after admin check", async () => {
@@ -106,7 +119,7 @@ await runCase("admin prompt page removes secondary intro blocks", async () => {
   assert.match(pageSource, /description: ""/);
   assert.match(pageSource, /highlights: \[\]/);
   assert.doesNotMatch(pageSource, /Edit the active system prompt and the template used to construct product details/);
-  assert.match(shellSource, /highlights\.length > 0/);
+  assert.doesNotMatch(shellSource, /highlightsTitle/);
   assert.match(shellSource, /description \? \(/);
 });
 
