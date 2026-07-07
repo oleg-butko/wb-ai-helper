@@ -29,6 +29,13 @@ function mapAdminAiPromptProfileError(error, reply) {
     });
   }
 
+  if (error?.code === "admin_ai_prompt_profile_default_protected") {
+    return reply.code(400).send({
+      error: "admin_ai_prompt_profile_default_protected",
+      message: "The default AI prompt profile cannot be removed.",
+    });
+  }
+
   if (error?.name === "ZodError") {
     return reply.code(400).send({
       error: "admin_ai_prompt_profile_invalid",
@@ -148,6 +155,34 @@ export async function registerAdminAiPromptProfileRoutes(app) {
       return reply.code(500).send({
         error: "admin_ai_prompt_profile_update_failed",
         message: "The backend could not update the AI prompt profile.",
+      });
+    }
+  });
+
+  app.delete("/v1/admin/ai-prompt-profiles/:profileId", async (request, reply) => {
+    const authentication = await resolveAppAdminRequest(request, reply);
+
+    if (!authentication.ok) {
+      return authentication.response;
+    }
+
+    try {
+      await request.server.services.deleteAdminAiPromptProfile({
+        profileId: request.params.profileId,
+      });
+
+      return reply.send({ ok: true });
+    } catch (error) {
+      const handled = mapAdminAiPromptProfileError(error, reply);
+
+      if (handled) {
+        return handled;
+      }
+
+      request.log.error({ err: error }, "Admin AI prompt profile delete failed");
+      return reply.code(500).send({
+        error: "admin_ai_prompt_profile_delete_failed",
+        message: "The backend could not delete the AI prompt profile.",
       });
     }
   });

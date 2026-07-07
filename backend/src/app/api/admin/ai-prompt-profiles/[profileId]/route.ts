@@ -4,7 +4,7 @@ import { createAdminAiPromptProfileDetailRouteHandlers } from "./route-handlers.
 
 export const dynamic = "force-dynamic";
 
-export const { PATCH } = createAdminAiPromptProfileDetailRouteHandlers({
+export const { PATCH, DELETE } = createAdminAiPromptProfileDetailRouteHandlers({
   createSupabaseServerClient,
   getInternalApiUrl,
 });

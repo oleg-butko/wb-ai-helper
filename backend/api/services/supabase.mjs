@@ -2,7 +2,10 @@ import { createHash, randomBytes } from "node:crypto";
 
 import { createClient } from "@supabase/supabase-js";
 
-import { defaultPromptProfileLabel } from "../../src/shared/api/admin-ai-prompt-profiles.mjs";
+import {
+  defaultPromptProfileLabel,
+  legacyDefaultPromptProfileLabels,
+} from "../../src/shared/api/admin-ai-prompt-profiles.mjs";
 import { assertApiEnv, getApiConfig } from "../config.mjs";
 
 const workspaceFileBaseSelect =
@@ -169,24 +172,31 @@ function mapAiProviderProfileSecretRecord(item) {
 }
 
 function mapAiPromptProfileRecord(item) {
+  const isDefault = isDefaultAiPromptProfileRecord(item);
+
   return {
     id: item.id,
-    label: item.label,
+    label: isDefault ? defaultPromptProfileLabel : item.label,
     systemPrompt: item.system_prompt,
     productDetailsTemplate: item.product_details_template,
     examplePayload: item.example_payload,
     isActive: Boolean(item.is_active),
-    isDefault: item.label === defaultPromptProfileLabel && item.created_by_admin_user_id === null,
+    isDefault,
     createdAt: item.created_at,
     updatedAt: item.updated_at,
   };
+}
+
+function isDefaultAiPromptProfileRecord(item) {
+  return item.created_by_admin_user_id === null &&
+    [defaultPromptProfileLabel, ...legacyDefaultPromptProfileLabels].includes(item.label);
 }
 
 async function assertUniqueAiPromptProfileLabel({ adminClient, label, excludeProfileId }) {
   const normalizedLabel = label.trim().toLowerCase();
   const { data, error } = await adminClient
     .from("ai_prompt_profiles")
-    .select("id, label");
+    .select("id, label, created_by_admin_user_id");
 
   if (error) {
     throw error;
@@ -197,7 +207,8 @@ async function assertUniqueAiPromptProfileLabel({ adminClient, label, excludePro
       return false;
     }
 
-    return item.label.trim().toLowerCase() === normalizedLabel;
+    return item.label.trim().toLowerCase() === normalizedLabel ||
+      (normalizedLabel === defaultPromptProfileLabel.toLowerCase() && isDefaultAiPromptProfileRecord(item));
   });
 
   if (conflictingProfile) {
@@ -1399,6 +1410,40 @@ export function createApiServices(config = getApiConfig(), overrides = {}) {
       }
 
       return data ? mapAiPromptProfileRecord(data) : null;
+    },
+    async deleteAdminAiPromptProfile({ profileId }) {
+      const { data: existingProfile, error: selectError } = await adminClient
+        .from("ai_prompt_profiles")
+        .select("id, label, created_by_admin_user_id")
+        .eq("id", profileId)
+        .maybeSingle();
+
+      if (selectError) {
+        throw selectError;
+      }
+
+      if (!existingProfile) {
+        const missingError = new Error("The requested AI prompt profile was not found.");
+        missingError.code = "admin_ai_prompt_profile_not_found";
+        throw missingError;
+      }
+
+      if (isDefaultAiPromptProfileRecord(existingProfile)) {
+        const protectedError = new Error("The default AI prompt profile cannot be removed.");
+        protectedError.code = "admin_ai_prompt_profile_default_protected";
+        throw protectedError;
+      }
+
+      const { error: deleteError } = await adminClient
+        .from("ai_prompt_profiles")
+        .delete()
+        .eq("id", profileId);
+
+      if (deleteError) {
+        throw deleteError;
+      }
+
+      return { ok: true };
     },
     async getActiveAiPromptProfile() {
       const { data, error } = await adminClient

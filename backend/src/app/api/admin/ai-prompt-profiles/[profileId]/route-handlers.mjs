@@ -2,6 +2,7 @@ import {
   adminAiPromptProfileErrorResponseSchema,
   adminAiPromptProfilePreviewResponseSchema,
   adminAiPromptProfileResponseSchema,
+  deleteAdminAiPromptProfileResponseSchema,
   previewAdminAiPromptProfileRequestSchema,
   updateAdminAiPromptProfileRequestSchema,
 } from "../../../../../shared/api/admin-ai-prompt-profiles.mjs";
@@ -36,6 +37,7 @@ async function forwardPromptProfileAction({
   fallbackError,
   fallbackMessage,
   responseSchema,
+  method = pathSuffix ? "POST" : "PATCH",
 }) {
   const authorizationHeaders = await createBearerAuthorizationHeaders(createSupabaseServerClient);
 
@@ -46,12 +48,12 @@ async function forwardPromptProfileAction({
   const upstream = await fetchImplementation(
     `${getInternalApiUrl()}/v1/admin/ai-prompt-profiles/${encodeURIComponent(profileId)}${pathSuffix}`,
     {
-      method: pathSuffix ? "POST" : "PATCH",
+      method,
       headers: {
         ...authorizationHeaders,
         "content-type": "application/json",
       },
-      body: JSON.stringify(requestPayload ?? {}),
+      body: method === "DELETE" ? undefined : JSON.stringify(requestPayload ?? {}),
       cache: "no-store",
     },
   );
@@ -101,7 +103,22 @@ export function createAdminAiPromptProfileDetailRouteHandlers({
     });
   }
 
-  return { PATCH };
+  async function DELETE(_request, { params }) {
+    const { profileId } = await params;
+
+    return forwardPromptProfileAction({
+      createSupabaseServerClient,
+      fetchImplementation,
+      getInternalApiUrl,
+      profileId,
+      fallbackError: "admin_ai_prompt_profile_delete_failed",
+      fallbackMessage: "The admin AI prompt profile delete request failed.",
+      responseSchema: deleteAdminAiPromptProfileResponseSchema,
+      method: "DELETE",
+    });
+  }
+
+  return { PATCH, DELETE };
 }
 
 export function createAdminAiPromptProfilePreviewRouteHandlers({

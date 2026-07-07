@@ -33,7 +33,8 @@ export const defaultPromptExamplePayload = {
   size: "M",
 };
 
-export const defaultPromptProfileLabel = "Default review response prompt";
+export const defaultPromptProfileLabel = "Default prompt";
+export const legacyDefaultPromptProfileLabels = ["Default review response prompt"];
 
 export const defaultSystemPrompt =
   "You are an assistant helping a Wildberries seller write polite, concise, useful responses to customer reviews. Reply in Russian. Do not invent facts. If the review is negative, acknowledge the issue and answer professionally.";
@@ -104,6 +105,10 @@ export const adminAiPromptProfilePreviewResponseSchema = z.object({
   unknownPlaceholders: z.array(z.string()),
 });
 
+export const deleteAdminAiPromptProfileResponseSchema = z.object({
+  ok: z.literal(true),
+});
+
 export const adminAiPromptProfileErrorCodeSchema = z.enum([
   "authorization_required",
   "invalid_session",
@@ -115,6 +120,8 @@ export const adminAiPromptProfileErrorCodeSchema = z.enum([
   "admin_ai_prompt_profile_list_failed",
   "admin_ai_prompt_profile_create_failed",
   "admin_ai_prompt_profile_update_failed",
+  "admin_ai_prompt_profile_delete_failed",
+  "admin_ai_prompt_profile_default_protected",
   "admin_ai_prompt_profile_preview_failed",
   "admin_ai_prompt_profile_activate_failed",
   "internal_api_error",

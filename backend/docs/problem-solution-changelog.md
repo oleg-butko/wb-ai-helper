@@ -1,5 +1,11 @@
 # Changelog
 
+## Prompt profile removal and short default label
+
+Problem: admins could create prompt profiles but had no UI/API path to remove obsolete custom prompts, and the seeded default prompt label was longer than needed.
+
+Solution: renamed the seeded/default prompt label to `Default prompt`, kept legacy default rows protected and displayed with the new short label, and added a `Remove` action plus admin DELETE API that blocks removal of the protected default profile.
+
 ## Remove duplicate extension API SQL script
 
 Problem: `docs/SQL/extension-api.sql` duplicated schema already maintained in `bootstrap-supabase-initial.sql`, which created an extra file to keep in sync.

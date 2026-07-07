@@ -202,6 +202,38 @@ export function AdminAiPromptProfilesCard() {
     }
   }
 
+  async function removeProfile() {
+    if (!selectedProfileId || isDefaultProfileSelected) {
+      return;
+    }
+
+    if (!window.confirm(`Remove prompt profile "${label}"?`)) {
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setFeedback(null);
+
+    try {
+      const response = await fetch(`/api/admin/ai-prompt-profiles/${encodeURIComponent(selectedProfileId)}`, {
+        method: "DELETE",
+      });
+      const payload = (await response.json().catch(() => null)) as { ok?: boolean } | unknown;
+
+      if (!response.ok || !isObject(payload) || payload.ok !== true) {
+        throw new Error(getPayloadMessage(payload) ?? "Could not remove AI prompt profile.");
+      }
+
+      setFeedback(`AI prompt profile "${label}" was removed.`);
+      await refreshProfiles();
+    } catch (removeError) {
+      setError(removeError instanceof Error ? removeError.message : "Could not remove AI prompt profile.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function previewProfile() {
     if (!selectedProfileId) {
       return;
@@ -320,6 +352,15 @@ export function AdminAiPromptProfilesCard() {
                 Create
               </Button>
               <Button color="green" loading={loading} onClick={activateProfile} disabled={!selectedProfileId || selectedProfile?.isActive}>Activate</Button>
+              <Button
+                color="red"
+                variant="light"
+                loading={loading}
+                onClick={removeProfile}
+                disabled={!selectedProfileId || isDefaultProfileSelected}
+              >
+                Remove
+              </Button>
             </Group>
           </Stack>
         </Card>

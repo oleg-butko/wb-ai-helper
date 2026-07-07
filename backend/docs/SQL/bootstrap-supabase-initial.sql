@@ -825,6 +825,16 @@ begin
 end;
 $$;
 
+update public.ai_prompt_profiles
+set label = 'Default prompt'
+where label = 'Default review response prompt'
+  and created_by_admin_user_id is null
+  and not exists (
+    select 1
+    from public.ai_prompt_profiles existing_profile
+    where lower(trim(existing_profile.label)) = lower(trim('Default prompt'))
+  );
+
 insert into public.ai_prompt_profiles (
   label,
   system_prompt,
@@ -833,7 +843,7 @@ insert into public.ai_prompt_profiles (
   is_active
 )
 values (
-  'Default review response prompt',
+  'Default prompt',
   'You are an assistant helping a Wildberries seller write polite, concise, useful responses to customer reviews. Reply in Russian. Do not invent facts. If the review is negative, acknowledge the issue and answer professionally.',
   'Customer review data:
 

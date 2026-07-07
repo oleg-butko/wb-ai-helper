@@ -6,6 +6,7 @@ import { createQueueService } from "../core/queue/service.mjs";
 import {
   defaultProductDetailsTemplate,
   defaultPromptExamplePayload,
+  defaultPromptProfileLabel,
   defaultSystemPrompt,
 } from "../../src/shared/api/admin-ai-prompt-profiles.mjs";
 
@@ -15,7 +16,7 @@ const adminUserId = "user-123";
 function createProfile(overrides = {}) {
   return {
     id: profileId,
-    label: "Default review response prompt",
+    label: defaultPromptProfileLabel,
     systemPrompt: defaultSystemPrompt,
     productDetailsTemplate: defaultProductDetailsTemplate,
     examplePayload: defaultPromptExamplePayload,
@@ -55,7 +56,7 @@ function createServices(overrides = {}) {
     },
     async updateAdminAiPromptProfile(input) {
       return createProfile({
-        label: input.label ?? "Default review response prompt",
+        label: input.label ?? defaultPromptProfileLabel,
         systemPrompt: input.systemPrompt ?? defaultSystemPrompt,
         productDetailsTemplate: input.productDetailsTemplate ?? defaultProductDetailsTemplate,
         examplePayload: input.examplePayload ?? defaultPromptExamplePayload,
@@ -63,6 +64,9 @@ function createServices(overrides = {}) {
     },
     async activateAdminAiPromptProfile() {
       return createProfile({ isActive: true });
+    },
+    async deleteAdminAiPromptProfile() {
+      return { ok: true };
     },
     ...createQueueService(),
     ...overrides,
@@ -172,7 +176,7 @@ await runCase("POST /v1/admin/ai-prompt-profiles rejects duplicate labels", asyn
         authorization: "Bearer valid-token",
       },
       payload: {
-        label: "Default review response prompt",
+        label: defaultPromptProfileLabel,
         systemPrompt: defaultSystemPrompt,
         productDetailsTemplate: defaultProductDetailsTemplate,
         examplePayload: defaultPromptExamplePayload,
@@ -183,6 +187,62 @@ await runCase("POST /v1/admin/ai-prompt-profiles rejects duplicate labels", asyn
     assert.equal(response.statusCode, 409);
     assert.equal(payload.error, "admin_ai_prompt_profile_label_conflict");
     assert.equal(payload.message, "An AI prompt profile with this label already exists.");
+  } finally {
+    await app.close();
+  }
+});
+
+await runCase("DELETE /v1/admin/ai-prompt-profiles/:profileId removes a prompt profile", async () => {
+  const calls = [];
+  const app = buildApiApp({
+    services: createServices({
+      async deleteAdminAiPromptProfile(input) {
+        calls.push(input);
+        return { ok: true };
+      },
+    }),
+  });
+
+  try {
+    const response = await app.inject({
+      method: "DELETE",
+      url: `/v1/admin/ai-prompt-profiles/${profileId}`,
+      headers: {
+        authorization: "Bearer valid-token",
+      },
+    });
+
+    assert.equal(response.statusCode, 200);
+    assert.deepEqual(response.json(), { ok: true });
+    assert.deepEqual(calls, [{ profileId }]);
+  } finally {
+    await app.close();
+  }
+});
+
+await runCase("DELETE /v1/admin/ai-prompt-profiles/:profileId rejects the protected default prompt", async () => {
+  const app = buildApiApp({
+    services: createServices({
+      async deleteAdminAiPromptProfile() {
+        const error = new Error("The default AI prompt profile cannot be removed.");
+        error.code = "admin_ai_prompt_profile_default_protected";
+        throw error;
+      },
+    }),
+  });
+
+  try {
+    const response = await app.inject({
+      method: "DELETE",
+      url: `/v1/admin/ai-prompt-profiles/${profileId}`,
+      headers: {
+        authorization: "Bearer valid-token",
+      },
+    });
+    const payload = response.json();
+
+    assert.equal(response.statusCode, 400);
+    assert.equal(payload.error, "admin_ai_prompt_profile_default_protected");
   } finally {
     await app.close();
   }
