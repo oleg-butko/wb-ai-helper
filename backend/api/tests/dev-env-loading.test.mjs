@@ -5,7 +5,18 @@ import { runCase } from "./helpers/test-helpers.mjs";
 import { getApiConfig } from "../config.mjs";
 import { getStorageConfig } from "../services/storage.mjs";
 import { readEnvFile } from "../../scripts/load-env.mjs";
+import { resolveRuntimeEnvFiles, runtimeEnvProfiles } from "../../scripts/env-profiles.mjs";
 
+await runCase("runtime env profiles resolve dev e2e and prod env files", async () => {
+  assert.deepEqual(runtimeEnvProfiles.dev, [".env.api.local", ".env.local"]);
+  assert.deepEqual(runtimeEnvProfiles.e2e, [".env.api.e2e.local", ".env.e2e.local"]);
+  assert.deepEqual(runtimeEnvProfiles.prod, [".env.api.prod.local", ".env.prod.local"]);
+
+  assert.deepEqual(
+    resolveRuntimeEnvFiles({ profile: "prod" }).envFiles.map((file) => file.relativePath),
+    [".env.api.prod.local", ".env.prod.local"],
+  );
+});
 
 await runCase("api/server.mjs resolves storage env from .env.api.local", async () => {
   const envFile = readEnvFile(".env.api.local");
@@ -60,7 +71,48 @@ await runCase("dev:web loads server-only API env before next dev", async () => {
   );
 
   assert.equal(packageJson.scripts["dev:web"], "node scripts/dev-web.mjs");
-  assert.match(devWebSource, /loadEnvFiles\(\["\.env\.api\.local", "\.env\.local"\]\)/);
+  assert.match(devWebSource, /loadRuntimeEnv\(\)/);
   assert.match(devWebSource, /nextBin/);
   assert.match(devWebSource, /process\.execPath, \[nextBin, "dev"\]/);
+});
+
+await runCase("api and worker startup use runtime env profiles", async () => {
+  const serverSource = await readFile(new URL("../server.mjs", import.meta.url), "utf8");
+  const workerSource = await readFile(new URL("../worker.mjs", import.meta.url), "utf8");
+  const loadE2ESource = await readFile(
+    new URL("../../scripts/load-e2e-env.mjs", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(serverSource, /loadRuntimeEnv\(\{ projectRoot \}\)/);
+  assert.match(workerSource, /loadRuntimeEnv\(\{ projectRoot \}\)/);
+  assert.doesNotMatch(serverSource, /\.env\.api\.local/);
+  assert.doesNotMatch(workerSource, /\.env\.api\.local/);
+  assert.match(loadE2ESource, /WB_AI_HELPER_ENV = "e2e"/);
+});
+
+await runCase("prod folder scripts load prod profile and preserve env files", async () => {
+  const packageJson = JSON.parse(
+    await readFile(new URL("../../package.json", import.meta.url), "utf8"),
+  );
+  const updateProdFolderSource = await readFile(
+    new URL("../../scripts/prod/update-prod-folder.mjs", import.meta.url),
+    "utf8",
+  );
+  const buildProdSource = await readFile(
+    new URL("../../scripts/prod/build-prod.mjs", import.meta.url),
+    "utf8",
+  );
+
+  assert.equal(packageJson.scripts["build:prod"], "node scripts/prod/build-prod.mjs");
+  assert.equal(packageJson.scripts["start:prod"], "node scripts/prod/start-prod.mjs");
+  assert.equal(packageJson.scripts["prod:update-folder"], "node scripts/prod/update-prod-folder.mjs");
+  assert.match(updateProdFolderSource, /wb-ai-helper-backend-prod/);
+  assert.match(updateProdFolderSource, /overwriteEnv/);
+  assert.match(updateProdFolderSource, /API_PORT", "8281"/);
+  assert.match(updateProdFolderSource, /PORT", "3001"/);
+  assert.match(updateProdFolderSource, /STORAGE_S3_BUCKET/);
+  assert.match(updateProdFolderSource, /npm ci/);
+  assert.match(updateProdFolderSource, /build:prod/);
+  assert.match(buildProdSource, /loadRuntimeEnv\(\{ profile: "prod", projectRoot \}\)/);
 });

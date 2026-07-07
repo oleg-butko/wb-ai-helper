@@ -9,4 +9,6 @@ export function loadE2EEnv() {
   if (explicitEnabledModules !== undefined) {
     process.env.ENABLED_MODULES = explicitEnabledModules;
   }
+
+  process.env.WB_AI_HELPER_ENV = "e2e";
 }

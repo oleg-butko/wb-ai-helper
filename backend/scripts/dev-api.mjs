@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
-import { loadEnvFiles } from "./load-env.mjs";
+import { loadRuntimeEnv } from "./env-profiles.mjs";
 
-loadEnvFiles([".env.api.local", ".env.local"]);
+loadRuntimeEnv();
 
 const child = spawn(process.execPath, ["api/server.mjs"], {
   stdio: "inherit",

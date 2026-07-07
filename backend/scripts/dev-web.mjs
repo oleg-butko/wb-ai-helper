@@ -1,8 +1,8 @@
 import { spawn } from "node:child_process";
 import path from "node:path";
-import { loadEnvFiles } from "./load-env.mjs";
+import { loadRuntimeEnv } from "./env-profiles.mjs";
 
-loadEnvFiles([".env.api.local", ".env.local"]);
+loadRuntimeEnv();
 
 const nextBin = path.join(process.cwd(), "node_modules", "next", "dist", "bin", "next");
 const child =

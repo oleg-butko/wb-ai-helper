@@ -1,6 +1,4 @@
 import { spawn } from "node:child_process";
-// import { loadEnvFiles } from "./load-env.mjs";
-// loadEnvFiles([".env.api.local", ".env.local"]);
 
 const childProcesses = [];
 

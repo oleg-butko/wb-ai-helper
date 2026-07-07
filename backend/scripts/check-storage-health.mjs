@@ -1,8 +1,8 @@
 import { assertApiEnv, getApiConfig } from "../api/config.mjs";
 import { createStorageService, getStorageConfig } from "../api/services/storage.mjs";
-import { loadEnvFiles } from "./load-env.mjs";
+import { loadRuntimeEnv } from "./env-profiles.mjs";
 
-loadEnvFiles([".env.api.local", ".env.local"]);
+loadRuntimeEnv();
 
 const config = assertApiEnv(getApiConfig());
 const storageConfig = getStorageConfig(config);

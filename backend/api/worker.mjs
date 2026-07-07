@@ -1,18 +1,21 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { loadEnvFiles } from "../scripts/load-env.mjs";
+import { loadRuntimeEnv } from "../scripts/env-profiles.mjs";
 import { assertApiEnv, getApiConfig } from "./config.mjs";
 import { createBullMQWorkerRuntime, hasBullMQConfig } from "./core/queue/bullmq.mjs";
 import { createStorageService } from "./services/storage.mjs";
 import { createApiServices } from "./supabase.mjs";
 
 const apiDir = path.dirname(fileURLToPath(import.meta.url));
+const projectRoot = path.resolve(apiDir, "..");
 
-loadEnvFiles([
-  path.resolve(apiDir, "../.env.api.local"),
-  path.resolve(apiDir, "../.env.local"),
-]);
+const runtimeEnv = loadRuntimeEnv({ projectRoot });
+
+console.info("Runtime env profile loaded", {
+  envProfile: runtimeEnv.profile,
+  envFiles: runtimeEnv.envFiles.map((file) => file.relativePath),
+});
 
 const config = assertApiEnv(getApiConfig());
 const storageServices = createStorageService(config);
