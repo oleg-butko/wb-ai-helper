@@ -68,6 +68,24 @@ await runCase("marketing home page exposes admin links after admin check", async
   assert.match(homeSource, /showMarketingNav=\{false\}/);
 });
 
+await runCase("app theme color scheme is server rendered from a cookie", async () => {
+  const layoutSource = await readFile(new URL("../../src/app/layout.tsx", import.meta.url), "utf8");
+  const providerSource = await readFile(new URL("../../src/components/app-provider.tsx", import.meta.url), "utf8");
+  const headerSource = await readFile(new URL("../../src/components/site-header.tsx", import.meta.url), "utf8");
+  const helperSource = await readFile(new URL("../../src/lib/theme/color-scheme.ts", import.meta.url), "utf8");
+
+  assert.match(layoutSource, /cookies\(\)/);
+  assert.match(layoutSource, /<Script/);
+  assert.match(layoutSource, /strategy="beforeInteractive"/);
+  assert.match(layoutSource, /getColorSchemeBootstrapScript\(initialColorScheme\)/);
+  assert.match(layoutSource, /data-mantine-color-scheme=\{initialColorScheme\}/);
+  assert.match(layoutSource, /<AppProvider initialColorScheme=\{initialColorScheme\}>/);
+  assert.match(providerSource, /defaultColorScheme=\{initialColorScheme\}/);
+  assert.match(headerSource, /setColorSchemeCookie\(nextColorScheme\)/);
+  assert.match(helperSource, /wb-ai-helper-color-scheme/);
+  assert.match(helperSource, /mantine-color-scheme-value/);
+});
+
 await runCase("admin API key filters are debounced and reason inputs are isolated", async () => {
   const source = await readFile(
     new URL("../../src/modules/admin/components/admin-extension-api-keys-card.tsx", import.meta.url),

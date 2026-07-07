@@ -34,6 +34,7 @@ import {
 
 import { localeLabels, locales, type Locale } from "@/lib/i18n/config";
 import { getLocalePath } from "@/lib/i18n/navigation";
+import { setColorSchemeCookie, type StoredColorScheme } from "@/lib/theme/color-scheme";
 import type { SiteDictionary } from "@/lib/i18n/dictionaries";
 import type { LocalizedModuleNavItem } from "@/modules/navigation";
 import type { AuthenticatedUser } from "@/types/auth";
@@ -87,6 +88,12 @@ export function SiteHeader({
   const signUpPath = `/${locale}/sign-up`;
   const logoutPath = "/auth/sign-out";
   const userDisplayName = user?.displayName ?? dictionary.user.name;
+
+  function toggleColorScheme() {
+    const nextColorScheme: StoredColorScheme = isDark ? "light" : "dark";
+    setColorSchemeCookie(nextColorScheme);
+    setColorScheme(nextColorScheme);
+  }
 
   return (
     <>
@@ -161,7 +168,7 @@ export function SiteHeader({
               size={42}
               radius="xl"
               aria-label={isDark ? dictionary.theme.light : dictionary.theme.dark}
-              onClick={() => setColorScheme(isDark ? "light" : "dark")}
+              onClick={toggleColorScheme}
             >
               {isDark ? <IconSunHigh size={18} /> : <IconMoonStars size={18} />}
             </ActionIcon>
@@ -303,7 +310,7 @@ export function SiteHeader({
               size={42}
               radius="xl"
               aria-label={isDark ? dictionary.theme.light : dictionary.theme.dark}
-              onClick={() => setColorScheme(isDark ? "light" : "dark")}
+              onClick={toggleColorScheme}
             >
               {isDark ? <IconSunHigh size={18} /> : <IconMoonStars size={18} />}
             </ActionIcon>
