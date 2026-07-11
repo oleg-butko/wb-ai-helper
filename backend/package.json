@@ -6,6 +6,7 @@
     "dev:api": "node api/server.mjs",
     "dev:worker": "node scripts/dev-worker.mjs",
     "dev:web": "node scripts/dev-web.mjs",
+    "prod": "npm run build:prod && npm run start:prod",
     "start:web": "next start",
     "build:prod": "node scripts/prod/build-prod.mjs",
     "start:prod:api": "node scripts/prod/start-api-prod.mjs",

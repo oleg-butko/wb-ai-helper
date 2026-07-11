@@ -15,6 +15,7 @@ const skipInstall = args.has("--skip-install");
 const skipBuild = args.has("--skip-build");
 
 const excludedNames = new Set([
+  ".git",
   ".next",
   ".playwright",
   "_files",
@@ -329,3 +330,4 @@ if (!skipBuild) {
 console.info("");
 console.info("Prod-like backend folder is ready.");
 console.info(`Start command: cd ${targetRoot} && npm run start:prod`);
+console.info(`Rebuild and start command: cd ${targetRoot} && npm run prod`);
