@@ -255,6 +255,9 @@ export async function registerExtensionRoutes(app) {
         baseUrl: providerProfile.baseUrl,
         apiKey: providerProfile.apiKey,
         model: providerProfile.defaultModel,
+        temperature: providerProfile.temperature,
+        maxTokens: providerProfile.maxTokens,
+        providerRouting: providerProfile.providerRouting,
         messages: [
           {
             role: "system",
@@ -265,6 +268,12 @@ export async function registerExtensionRoutes(app) {
             content: productDetailsPrompt,
           },
         ],
+        logContext: {
+          operation: "extension-generation",
+          providerProfileId: providerProfile.id,
+          correlationId: requestId,
+          onError: (logError) => request.log.warn({ err: logError }, "Provider JSON log write failed"),
+        },
       });
 
       const consumedQuota = await request.server.services.consumeExtensionApiQuota({

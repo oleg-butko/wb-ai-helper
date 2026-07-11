@@ -1,3 +1,5 @@
+import { createProviderJsonLogger } from "./provider-json-logger.mjs";
+
 function joinProviderUrl(baseUrl, path) {
   const normalizedBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
   return new URL(path.replace(/^\/+/, ""), normalizedBase);
@@ -10,8 +12,47 @@ function createProviderHeaders(apiKey) {
   };
 }
 
-async function readJsonResponse(response) {
-  const payload = await response.json().catch(() => null);
+async function requestOpenAiCompatibleJson({
+  url,
+  method,
+  apiKey,
+  body,
+  logContext,
+  fetchImplementation,
+}) {
+  const providerLogger = createProviderJsonLogger(logContext);
+  await providerLogger.writeRequest({ method, url, body });
+
+  let response;
+
+  try {
+    response = await fetchImplementation(url, {
+      method,
+      headers: createProviderHeaders(apiKey),
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    });
+  } catch (error) {
+    await providerLogger.writeResponse({ error });
+    throw error;
+  }
+
+  let rawBody;
+
+  try {
+    rawBody = await response.text();
+  } catch (error) {
+    await providerLogger.writeResponse({
+      status: response.status,
+      ok: false,
+      error,
+    });
+    throw error;
+  }
+  let payload = null;
+
+  try {
+    payload = rawBody ? JSON.parse(rawBody) : null;
+  } catch {}
 
   if (!response.ok) {
     const message =
@@ -21,8 +62,22 @@ async function readJsonResponse(response) {
     const error = new Error(message);
     error.status = response.status;
     error.payload = payload;
+    await providerLogger.writeResponse({
+      status: response.status,
+      ok: false,
+      body: payload,
+      ...(payload === null && rawBody ? { rawBody } : {}),
+      error,
+    });
     throw error;
   }
+
+  await providerLogger.writeResponse({
+    status: response.status,
+    ok: true,
+    body: payload,
+    ...(payload === null && rawBody ? { rawBody } : {}),
+  });
 
   return payload;
 }
@@ -44,12 +99,18 @@ export async function listOpenAiCompatibleModels({
   baseUrl,
   apiKey,
   fetchImplementation = globalThis.fetch,
+  logContext,
 }) {
-  const response = await fetchImplementation(joinProviderUrl(baseUrl, "/models"), {
+  const payload = await requestOpenAiCompatibleJson({
+    url: joinProviderUrl(baseUrl, "/models"),
     method: "GET",
-    headers: createProviderHeaders(apiKey),
+    apiKey,
+    logContext: {
+      operation: "model-list",
+      ...logContext,
+    },
+    fetchImplementation,
   });
-  const payload = await readJsonResponse(response);
   const modelData = Array.isArray(payload?.data) ? payload.data : [];
 
   return modelData
@@ -61,7 +122,11 @@ export async function checkOpenAiCompatibleChat({
   baseUrl,
   apiKey,
   model,
+  temperature = 1,
+  maxTokens = 500,
+  providerRouting = { mode: "default" },
   fetchImplementation = globalThis.fetch,
+  logContext,
 }) {
   return createOpenAiCompatibleChatCompletion({
     baseUrl,
@@ -77,9 +142,14 @@ export async function checkOpenAiCompatibleChat({
         content: "Reply with exactly: ok",
       },
     ],
-    temperature: 1,
-    maxTokens: 16,
+    temperature,
+    maxTokens,
+    providerRouting,
     fetchImplementation,
+    logContext: {
+      operation: "provider-check",
+      ...logContext,
+    },
   });
 }
 
@@ -89,8 +159,10 @@ export async function createOpenAiCompatibleChatCompletion({
   model,
   messages,
   temperature = 1,
-  maxTokens,
+  maxTokens = 500,
+  providerRouting = { mode: "default" },
   fetchImplementation = globalThis.fetch,
+  logContext,
 }) {
   const requestPayload = {
     model,
@@ -102,12 +174,28 @@ export async function createOpenAiCompatibleChatCompletion({
     requestPayload.max_tokens = maxTokens;
   }
 
-  const response = await fetchImplementation(joinProviderUrl(baseUrl, "/chat/completions"), {
+  if (providerRouting.mode === "fallback") {
+    requestPayload.provider = {
+      order: providerRouting.order,
+      allow_fallbacks: true,
+    };
+  } else if (providerRouting.mode === "only-one") {
+    requestPayload.provider = {
+      only: [providerRouting.only],
+    };
+  }
+
+  const payload = await requestOpenAiCompatibleJson({
+    url: joinProviderUrl(baseUrl, "/chat/completions"),
     method: "POST",
-    headers: createProviderHeaders(apiKey),
-    body: JSON.stringify(requestPayload),
+    apiKey,
+    body: requestPayload,
+    logContext: {
+      operation: "chat-completion",
+      ...logContext,
+    },
+    fetchImplementation,
   });
-  const payload = await readJsonResponse(response);
 
   return extractChatCompletionText(payload);
 }

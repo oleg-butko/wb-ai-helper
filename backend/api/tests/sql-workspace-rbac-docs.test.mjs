@@ -25,6 +25,12 @@ await runCase("AI profile activation RPCs qualify is_active column references", 
   const sql = await readFile(new URL("../../docs/SQL/bootstrap-supabase-initial.sql", import.meta.url), "utf8");
 
   assert.match(sql, /where ai_provider_profiles\.is_active = true/i);
+  assert.match(sql, /temperature double precision not null default 1/i);
+  assert.match(sql, /max_tokens integer not null default 500/i);
+  assert.match(sql, /provider_routing_mode text not null default 'default'/i);
+  assert.match(sql, /ai_provider_profiles\.provider_routing_mode/i);
+  assert.match(sql, /ai_provider_profiles\.provider_order/i);
+  assert.match(sql, /ai_provider_profiles\.provider_only/i);
   assert.match(sql, /where ai_prompt_profiles\.is_active = true/i);
   assert.doesNotMatch(sql, /where is_active = true\s+and id <> profile_id/i);
 });

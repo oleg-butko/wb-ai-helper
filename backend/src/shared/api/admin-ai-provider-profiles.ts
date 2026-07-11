@@ -6,6 +6,7 @@ import {
   adminAiProviderProfileCheckResponseSchema,
   adminAiProviderProfileListResponseSchema,
   adminAiProviderProfileModelsResponseSchema,
+  aiProviderRoutingSchema,
   createAdminAiProviderProfileResponseSchema,
   updateAdminAiProviderProfileResponseSchema,
 } from "./admin-ai-provider-profiles.mjs";
@@ -25,3 +26,4 @@ export type AdminAiProviderProfileModelsResponse = z.infer<
 export type AdminAiProviderProfileCheckResponse = z.infer<
   typeof adminAiProviderProfileCheckResponseSchema
 >;
+export type AiProviderRouting = z.infer<typeof aiProviderRoutingSchema>;

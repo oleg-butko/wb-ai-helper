@@ -33,6 +33,7 @@
     "test:api:routes:workspaces": "node scripts/run-test-suite.mjs api:routes:workspaces",
     "test:api:routes:workspace-files": "node scripts/run-test-suite.mjs api:routes:workspace-files",
     "test:api:queue-service": "node scripts/run-test-suite.mjs api:queue-service",
+    "test:api:provider-client": "node scripts/run-test-suite.mjs api:provider-client",
     "test:api:modules": "node scripts/run-test-suite.mjs api:modules",
     "test:api:next-proxy:workspaces": "node scripts/run-test-suite.mjs api:next-proxy:workspaces",
     "test:api:next-proxy:workspace-members": "node scripts/run-test-suite.mjs api:next-proxy:workspace-members",

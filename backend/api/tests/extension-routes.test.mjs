@@ -75,6 +75,12 @@ function createExtensionServices(overrides = {}) {
         baseUrl: "https://api.provider.example/v1",
         apiKey: "provider-secret",
         defaultModel: "test-model",
+        temperature: 0.4,
+        maxTokens: 750,
+        providerRouting: {
+          mode: "fallback",
+          order: ["name1", "name2"],
+        },
         isActive: true,
       };
     },
@@ -348,7 +354,12 @@ await runCase("POST /v1/extension/review-response calls the active provider and 
     assert.equal(providerCalls[0].url, "https://api.provider.example/v1/chat/completions");
     assert.equal(providerCalls[0].headers.authorization, "Bearer provider-secret");
     assert.equal(providerCalls[0].body.model, "test-model");
-    assert.equal(providerCalls[0].body.temperature, 1);
+    assert.equal(providerCalls[0].body.temperature, 0.4);
+    assert.equal(providerCalls[0].body.max_tokens, 750);
+    assert.deepEqual(providerCalls[0].body.provider, {
+      order: ["name1", "name2"],
+      allow_fallbacks: true,
+    });
     assert.equal(providerCalls[0].body.messages[0].content, "Reply in Russian.");
     assert.match(providerCalls[0].body.messages[1].content, /Product: Парные худи/);
     assert.deepEqual(

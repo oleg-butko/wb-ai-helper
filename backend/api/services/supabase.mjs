@@ -152,11 +152,56 @@ function mapAiProviderProfileRecord(item) {
     label: item.label,
     baseUrl: item.base_url,
     defaultModel: item.default_model ?? null,
+    temperature: item.temperature ?? 1,
+    maxTokens: item.max_tokens ?? 500,
+    providerRouting: mapAiProviderRoutingRecord(item),
     isActive: Boolean(item.is_active),
     hasApiKey: Boolean(item.api_key_secret),
     apiKeyPreview: item.api_key_secret ? maskSecret(item.api_key_secret) : null,
     createdAt: item.created_at,
     updatedAt: item.updated_at,
+  };
+}
+
+function mapAiProviderRoutingRecord(item) {
+  if (item.provider_routing_mode === "fallback") {
+    return {
+      mode: "fallback",
+      order: Array.isArray(item.provider_order) ? item.provider_order : [],
+    };
+  }
+
+  if (item.provider_routing_mode === "only-one") {
+    return {
+      mode: "only-one",
+      only: item.provider_only ?? "",
+    };
+  }
+
+  return { mode: "default" };
+}
+
+function mapAiProviderRoutingPatch(providerRouting) {
+  if (providerRouting.mode === "fallback") {
+    return {
+      provider_routing_mode: "fallback",
+      provider_order: providerRouting.order,
+      provider_only: null,
+    };
+  }
+
+  if (providerRouting.mode === "only-one") {
+    return {
+      provider_routing_mode: "only-one",
+      provider_order: [],
+      provider_only: providerRouting.only,
+    };
+  }
+
+  return {
+    provider_routing_mode: "default",
+    provider_order: [],
+    provider_only: null,
   };
 }
 
@@ -167,6 +212,9 @@ function mapAiProviderProfileSecretRecord(item) {
     baseUrl: item.base_url,
     apiKey: item.api_key_secret,
     defaultModel: item.default_model ?? null,
+    temperature: item.temperature ?? 1,
+    maxTokens: item.max_tokens ?? 500,
+    providerRouting: mapAiProviderRoutingRecord(item),
     isActive: Boolean(item.is_active),
   };
 }
@@ -1176,7 +1224,7 @@ export function createApiServices(config = getApiConfig(), overrides = {}) {
     async listAdminAiProviderProfiles() {
       const { data, error } = await adminClient
         .from("ai_provider_profiles")
-        .select("id, label, base_url, api_key_secret, default_model, is_active, created_at, updated_at")
+        .select("id, label, base_url, api_key_secret, default_model, temperature, max_tokens, provider_routing_mode, provider_order, provider_only, is_active, created_at, updated_at")
         .order("is_active", { ascending: false })
         .order("created_at", { ascending: false });
 
@@ -1191,6 +1239,9 @@ export function createApiServices(config = getApiConfig(), overrides = {}) {
       baseUrl,
       apiKey,
       defaultModel = null,
+      temperature = 1,
+      maxTokens = 500,
+      providerRouting = { mode: "default" },
       adminUserId,
     }) {
       const { data, error } = await adminClient
@@ -1200,10 +1251,13 @@ export function createApiServices(config = getApiConfig(), overrides = {}) {
           base_url: baseUrl.trim().replace(/\/+$/, ""),
           api_key_secret: apiKey.trim(),
           default_model: typeof defaultModel === "string" && defaultModel.trim() ? defaultModel.trim() : null,
+          temperature,
+          max_tokens: maxTokens,
+          ...mapAiProviderRoutingPatch(providerRouting),
           created_by_admin_user_id: adminUserId,
           updated_by_admin_user_id: adminUserId,
         })
-        .select("id, label, base_url, api_key_secret, default_model, is_active, created_at, updated_at")
+        .select("id, label, base_url, api_key_secret, default_model, temperature, max_tokens, provider_routing_mode, provider_order, provider_only, is_active, created_at, updated_at")
         .single();
 
       if (error) {
@@ -1218,6 +1272,9 @@ export function createApiServices(config = getApiConfig(), overrides = {}) {
       baseUrl,
       apiKey,
       defaultModel,
+      temperature,
+      maxTokens,
+      providerRouting,
     }) {
       const patch = {};
 
@@ -1240,11 +1297,23 @@ export function createApiServices(config = getApiConfig(), overrides = {}) {
             : null;
       }
 
+      if (temperature !== undefined) {
+        patch.temperature = temperature;
+      }
+
+      if (maxTokens !== undefined) {
+        patch.max_tokens = maxTokens;
+      }
+
+      if (providerRouting !== undefined) {
+        Object.assign(patch, mapAiProviderRoutingPatch(providerRouting));
+      }
+
       const { data, error } = await adminClient
         .from("ai_provider_profiles")
         .update(patch)
         .eq("id", profileId)
-        .select("id, label, base_url, api_key_secret, default_model, is_active, created_at, updated_at")
+        .select("id, label, base_url, api_key_secret, default_model, temperature, max_tokens, provider_routing_mode, provider_order, provider_only, is_active, created_at, updated_at")
         .maybeSingle();
 
       if (error) {
@@ -1262,7 +1331,7 @@ export function createApiServices(config = getApiConfig(), overrides = {}) {
     async getAdminAiProviderProfileSecret({ profileId }) {
       const { data, error } = await adminClient
         .from("ai_provider_profiles")
-        .select("id, label, base_url, api_key_secret, default_model, is_active")
+        .select("id, label, base_url, api_key_secret, default_model, temperature, max_tokens, provider_routing_mode, provider_order, provider_only, is_active")
         .eq("id", profileId)
         .maybeSingle();
 
@@ -1275,7 +1344,7 @@ export function createApiServices(config = getApiConfig(), overrides = {}) {
     async getActiveAiProviderProfileSecret() {
       const { data, error } = await adminClient
         .from("ai_provider_profiles")
-        .select("id, label, base_url, api_key_secret, default_model, is_active")
+        .select("id, label, base_url, api_key_secret, default_model, temperature, max_tokens, provider_routing_mode, provider_order, provider_only, is_active")
         .eq("is_active", true)
         .maybeSingle();
 

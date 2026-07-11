@@ -13,6 +13,9 @@ function createProfile(overrides = {}) {
     label: "Kimi profile",
     baseUrl: "https://api.moonshot.ai/v1",
     defaultModel: "kimi-k2.5",
+    temperature: 1,
+    maxTokens: 500,
+    providerRouting: { mode: "default" },
     isActive: false,
     hasApiKey: true,
     apiKeyPreview: "sk-j…JqAK",
@@ -60,6 +63,9 @@ function createServices(overrides = {}) {
         baseUrl: "https://api.moonshot.ai/v1",
         apiKey: "sk-test",
         defaultModel: "kimi-k2.5",
+        temperature: 0.7,
+        maxTokens: 640,
+        providerRouting: { mode: "only-one", only: "moonshot" },
       };
     },
     ...createQueueService(),
@@ -143,6 +149,12 @@ await runCase("POST /v1/admin/ai-provider-profiles creates a profile without ret
         baseUrl: "https://api.moonshot.ai/v1",
         apiKey: "sk-secret",
         defaultModel: "kimi-k2.5",
+        temperature: 0.6,
+        maxTokens: 700,
+        providerRouting: {
+          mode: "fallback",
+          order: ["name1", "name2"],
+        },
       },
     });
 
@@ -155,9 +167,83 @@ await runCase("POST /v1/admin/ai-provider-profiles creates a profile without ret
         baseUrl: "https://api.moonshot.ai/v1",
         apiKey: "sk-secret",
         defaultModel: "kimi-k2.5",
+        temperature: 0.6,
+        maxTokens: 700,
+        providerRouting: {
+          mode: "fallback",
+          order: ["name1", "name2"],
+        },
         adminUserId,
       },
     ]);
+  } finally {
+    await app.close();
+  }
+});
+
+await runCase("POST /v1/admin/ai-provider-profiles validates generation and routing settings", async () => {
+  const app = buildApiApp({ services: createServices() });
+
+  try {
+    const response = await app.inject({
+      method: "POST",
+      url: "/v1/admin/ai-provider-profiles",
+      headers: { authorization: "Bearer valid-token" },
+      payload: {
+        label: "Invalid profile",
+        baseUrl: "https://api.provider.example/v1",
+        apiKey: "secret",
+        temperature: 3,
+        maxTokens: 0,
+        providerRouting: { mode: "fallback", order: [] },
+      },
+    });
+
+    assert.equal(response.statusCode, 400);
+    assert.equal(response.json().error, "admin_ai_provider_profile_invalid");
+  } finally {
+    await app.close();
+  }
+});
+
+await runCase("PATCH /v1/admin/ai-provider-profiles/:profileId saves generation settings", async () => {
+  const calls = [];
+  const app = buildApiApp({
+    services: createServices({
+      async updateAdminAiProviderProfile(input) {
+        calls.push(input);
+        return createProfile({
+          defaultModel: input.defaultModel,
+          temperature: input.temperature,
+          maxTokens: input.maxTokens,
+          providerRouting: input.providerRouting,
+        });
+      },
+    }),
+  });
+
+  try {
+    const response = await app.inject({
+      method: "PATCH",
+      url: `/v1/admin/ai-provider-profiles/${profileId}`,
+      headers: { authorization: "Bearer valid-token" },
+      payload: {
+        defaultModel: "updated-model",
+        temperature: 0.25,
+        maxTokens: 900,
+        providerRouting: { mode: "only-one", only: "name1" },
+      },
+    });
+
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.json().profile.temperature, 0.25);
+    assert.deepEqual(calls, [{
+      profileId,
+      defaultModel: "updated-model",
+      temperature: 0.25,
+      maxTokens: 900,
+      providerRouting: { mode: "only-one", only: "name1" },
+    }]);
   } finally {
     await app.close();
   }
@@ -260,7 +346,9 @@ await runCase("POST /v1/admin/ai-provider-profiles/:profileId/check runs a chat 
     assert.equal(response.json().responseText, "ok");
     assert.equal(fetchCalls[0].url, "https://api.moonshot.ai/v1/chat/completions");
     assert.equal(fetchCalls[0].body.model, "kimi-k2.5");
-    assert.equal(fetchCalls[0].body.temperature, 1);
+    assert.equal(fetchCalls[0].body.temperature, 0.7);
+    assert.equal(fetchCalls[0].body.max_tokens, 640);
+    assert.deepEqual(fetchCalls[0].body.provider, { only: ["moonshot"] });
   } finally {
     globalThis.fetch = originalFetch;
     await app.close();

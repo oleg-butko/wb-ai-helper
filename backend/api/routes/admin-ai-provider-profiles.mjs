@@ -158,6 +158,11 @@ export async function registerAdminAiProviderProfileRoutes(app) {
       const models = await listOpenAiCompatibleModels({
         baseUrl: profile.baseUrl,
         apiKey: profile.apiKey,
+        logContext: {
+          providerProfileId: profile.id,
+          correlationId: request.id,
+          onError: (logError) => request.log.warn({ err: logError }, "Provider JSON log write failed"),
+        },
       });
 
       return reply.send({ models });
@@ -208,6 +213,14 @@ export async function registerAdminAiProviderProfileRoutes(app) {
         baseUrl: profile.baseUrl,
         apiKey: profile.apiKey,
         model: model.trim(),
+        temperature: profile.temperature,
+        maxTokens: profile.maxTokens,
+        providerRouting: profile.providerRouting,
+        logContext: {
+          providerProfileId: profile.id,
+          correlationId: request.id,
+          onError: (logError) => request.log.warn({ err: logError }, "Provider JSON log write failed"),
+        },
       });
 
       return reply.send({

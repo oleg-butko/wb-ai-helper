@@ -68,6 +68,7 @@ export const testSuites = {
       "api:routes:workspaces",
       "api:routes:workspace-files",
       "api:queue-service",
+      "api:provider-client",
     ],
   },
   "api:routes:account": {
@@ -101,6 +102,10 @@ export const testSuites = {
   "api:queue-service": {
     label: "test:api:queue-service",
     ...nodeScript("scripts/run-node-with-warning-filter.mjs", "api/tests/queue-service.test.mjs"),
+  },
+  "api:provider-client": {
+    label: "test:api:provider-client",
+    ...nodeScript("scripts/run-node-with-warning-filter.mjs", "api/tests/openai-compatible-provider.test.mjs"),
   },
   "api:modules": {
     label: "test:api:modules",
