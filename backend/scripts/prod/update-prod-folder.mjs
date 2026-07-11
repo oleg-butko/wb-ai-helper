@@ -20,6 +20,7 @@ const excludedNames = new Set([
   ".playwright",
   "_files",
   "coverage",
+  "logs",
   "node_modules",
   "screenshots",
   "test-results",

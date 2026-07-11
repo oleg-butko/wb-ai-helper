@@ -1,17 +1,20 @@
 import { spawn } from "node:child_process";
 
 import { getProdIsolationWarnings, loadRuntimeEnv } from "../env-profiles.mjs";
+import { createLogSession } from "../process-logs.mjs";
 
 const runtimeEnv = loadRuntimeEnv({ profile: "prod" });
+const logSession = createLogSession({ command: "prod-start" });
+logSession.writeSystem(`Saving prod output to ${logSession.directory}`);
 
 for (const warning of getProdIsolationWarnings()) {
-  console.warn(`[prod-env] ${warning}`);
+  logSession.writeLine(`[prod-env] ${warning}`, process.stderr);
 }
 
 const childProcesses = [];
 let shuttingDown = false;
 
-function runScript(scriptName) {
+function runScript(scriptName, logFileName) {
   const command =
     process.platform === "win32"
       ? {
@@ -24,15 +27,21 @@ function runScript(scriptName) {
         };
 
   const child = spawn(command.file, command.args, {
-    stdio: "inherit",
+    stdio: ["inherit", "pipe", "pipe"],
     env: {
-      ...process.env,
+      ...logSession.env,
       WB_AI_HELPER_ENV: runtimeEnv.profile,
       NODE_ENV: "production",
     },
   });
 
   childProcesses.push(child);
+  logSession.attachChild(child, logFileName);
+
+  child.on("error", (error) => {
+    logSession.writeSystem(`${scriptName} failed to start: ${error.message}`);
+    shutdown(1);
+  });
 
   child.on("exit", (code) => {
     if (!shuttingDown) {
@@ -50,12 +59,13 @@ function shutdown(exitCode = 0) {
     }
   }
 
+  logSession.close();
   process.exit(exitCode);
 }
 
 process.on("SIGINT", () => shutdown(0));
 process.on("SIGTERM", () => shutdown(0));
 
-runScript("start:prod:api");
-runScript("start:prod:worker");
-runScript("start:prod:web");
+runScript("start:prod:api", "api.log");
+runScript("start:prod:worker", "worker.log");
+runScript("start:prod:web", "web.log");

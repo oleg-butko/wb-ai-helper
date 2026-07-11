@@ -103,8 +103,13 @@ await runCase("prod folder scripts load prod profile and preserve env files", as
     new URL("../../scripts/prod/build-prod.mjs", import.meta.url),
     "utf8",
   );
+  const runProdSource = await readFile(
+    new URL("../../scripts/prod/run-prod.mjs", import.meta.url),
+    "utf8",
+  );
 
   assert.equal(packageJson.scripts["build:prod"], "node scripts/prod/build-prod.mjs");
+  assert.equal(packageJson.scripts.prod, "node scripts/prod/run-prod.mjs");
   assert.equal(packageJson.scripts["start:prod"], "node scripts/prod/start-prod.mjs");
   assert.equal(packageJson.scripts["prod:update-folder"], "node scripts/prod/update-prod-folder.mjs");
   assert.match(updateProdFolderSource, /wb-ai-helper-backend-prod/);
@@ -114,5 +119,8 @@ await runCase("prod folder scripts load prod profile and preserve env files", as
   assert.match(updateProdFolderSource, /STORAGE_S3_BUCKET/);
   assert.match(updateProdFolderSource, /npm ci/);
   assert.match(updateProdFolderSource, /build:prod/);
+  assert.match(updateProdFolderSource, /"logs"/);
   assert.match(buildProdSource, /loadRuntimeEnv\(\{ profile: "prod", projectRoot \}\)/);
+  assert.match(runProdSource, /createLogSession\(\{ command: "prod", projectRoot \}\)/);
+  assert.match(runProdSource, /logFileName: "build\.log"/);
 });
