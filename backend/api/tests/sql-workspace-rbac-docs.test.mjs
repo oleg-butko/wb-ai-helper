@@ -26,11 +26,18 @@ await runCase("AI profile activation RPCs qualify is_active column references", 
 
   assert.match(sql, /where ai_provider_profiles\.is_active = true/i);
   assert.match(sql, /temperature double precision not null default 1/i);
-  assert.match(sql, /max_tokens integer not null default 500/i);
+  assert.match(sql, /max_tokens integer not null default 2000/i);
+  assert.match(sql, /max_completion_tokens integer not null default 2000/i);
+  assert.match(sql, /add column if not exists max_completion_tokens/i);
+  assert.match(sql, /add column if not exists available_models/i);
+  assert.match(sql, /alter column max_tokens set default 2000/i);
+  assert.match(sql, /drop function if exists public\.activate_ai_provider_profile\(uuid, uuid\)/i);
   assert.match(sql, /provider_routing_mode text not null default 'default'/i);
   assert.match(sql, /ai_provider_profiles\.provider_routing_mode/i);
   assert.match(sql, /ai_provider_profiles\.provider_order/i);
   assert.match(sql, /ai_provider_profiles\.provider_only/i);
+  assert.match(sql, /ai_provider_profiles\.available_models/i);
+  assert.match(sql, /ai_provider_profiles\.models_refreshed_at/i);
   assert.match(sql, /where ai_prompt_profiles\.is_active = true/i);
   assert.doesNotMatch(sql, /where is_active = true\s+and id <> profile_id/i);
 });

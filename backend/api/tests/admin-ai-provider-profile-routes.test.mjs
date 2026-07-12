@@ -14,8 +14,11 @@ function createProfile(overrides = {}) {
     baseUrl: "https://api.moonshot.ai/v1",
     defaultModel: "kimi-k2.5",
     temperature: 1,
-    maxTokens: 500,
+    maxTokens: 2000,
+    maxCompletionTokens: 2000,
     providerRouting: { mode: "default" },
+    availableModels: ["kimi-k2.5", "kimi-latest"],
+    modelsRefreshedAt: "2026-07-12T00:00:00.000Z",
     isActive: false,
     hasApiKey: true,
     apiKeyPreview: "sk-j…JqAK",
@@ -51,6 +54,7 @@ function createServices(overrides = {}) {
         defaultModel: input.defaultModel,
       });
     },
+    async updateAdminAiProviderModels() {},
     async activateAdminAiProviderProfile() {
       return createProfile({
         isActive: true,
@@ -65,6 +69,7 @@ function createServices(overrides = {}) {
         defaultModel: "kimi-k2.5",
         temperature: 0.7,
         maxTokens: 640,
+        maxCompletionTokens: 800,
         providerRouting: { mode: "only-one", only: "moonshot" },
       };
     },
@@ -151,6 +156,7 @@ await runCase("POST /v1/admin/ai-provider-profiles creates a profile without ret
         defaultModel: "kimi-k2.5",
         temperature: 0.6,
         maxTokens: 700,
+        maxCompletionTokens: 900,
         providerRouting: {
           mode: "fallback",
           order: ["name1", "name2"],
@@ -169,6 +175,7 @@ await runCase("POST /v1/admin/ai-provider-profiles creates a profile without ret
         defaultModel: "kimi-k2.5",
         temperature: 0.6,
         maxTokens: 700,
+        maxCompletionTokens: 900,
         providerRouting: {
           mode: "fallback",
           order: ["name1", "name2"],
@@ -195,6 +202,7 @@ await runCase("POST /v1/admin/ai-provider-profiles validates generation and rout
         apiKey: "secret",
         temperature: 3,
         maxTokens: 0,
+        maxCompletionTokens: 0,
         providerRouting: { mode: "fallback", order: [] },
       },
     });
@@ -216,6 +224,7 @@ await runCase("PATCH /v1/admin/ai-provider-profiles/:profileId saves generation 
           defaultModel: input.defaultModel,
           temperature: input.temperature,
           maxTokens: input.maxTokens,
+          maxCompletionTokens: input.maxCompletionTokens,
           providerRouting: input.providerRouting,
         });
       },
@@ -231,6 +240,7 @@ await runCase("PATCH /v1/admin/ai-provider-profiles/:profileId saves generation 
         defaultModel: "updated-model",
         temperature: 0.25,
         maxTokens: 900,
+        maxCompletionTokens: 1100,
         providerRouting: { mode: "only-one", only: "name1" },
       },
     });
@@ -242,6 +252,7 @@ await runCase("PATCH /v1/admin/ai-provider-profiles/:profileId saves generation 
       defaultModel: "updated-model",
       temperature: 0.25,
       maxTokens: 900,
+      maxCompletionTokens: 1100,
       providerRouting: { mode: "only-one", only: "name1" },
     }]);
   } finally {
@@ -287,6 +298,7 @@ await runCase("POST /v1/admin/ai-provider-profiles/:profileId/activate activates
 await runCase("GET /v1/admin/ai-provider-profiles/:profileId/models lists provider models", async () => {
   const originalFetch = globalThis.fetch;
   const fetchCalls = [];
+  const modelCacheCalls = [];
   globalThis.fetch = async (url, init) => {
     fetchCalls.push({ url: url.toString(), init });
     return Response.json({
@@ -294,7 +306,11 @@ await runCase("GET /v1/admin/ai-provider-profiles/:profileId/models lists provid
     });
   };
   const app = buildApiApp({
-    services: createServices(),
+    services: createServices({
+      async updateAdminAiProviderModels(input) {
+        modelCacheCalls.push(input);
+      },
+    }),
   });
 
   try {
@@ -310,6 +326,10 @@ await runCase("GET /v1/admin/ai-provider-profiles/:profileId/models lists provid
     assert.deepEqual(response.json().models, [{ id: "kimi-k2.5" }, { id: "kimi-latest" }]);
     assert.equal(fetchCalls[0].url, "https://api.moonshot.ai/v1/models");
     assert.equal(fetchCalls[0].init.headers.authorization, "Bearer sk-test");
+    assert.deepEqual(modelCacheCalls, [{
+      profileId,
+      models: [{ id: "kimi-k2.5" }, { id: "kimi-latest" }],
+    }]);
   } finally {
     globalThis.fetch = originalFetch;
     await app.close();
@@ -348,6 +368,7 @@ await runCase("POST /v1/admin/ai-provider-profiles/:profileId/check runs a chat 
     assert.equal(fetchCalls[0].body.model, "kimi-k2.5");
     assert.equal(fetchCalls[0].body.temperature, 0.7);
     assert.equal(fetchCalls[0].body.max_tokens, 640);
+    assert.equal(fetchCalls[0].body.max_completion_tokens, 800);
     assert.deepEqual(fetchCalls[0].body.provider, { only: ["moonshot"] });
   } finally {
     globalThis.fetch = originalFetch;

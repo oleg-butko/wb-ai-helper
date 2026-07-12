@@ -22,7 +22,10 @@ export const adminAiProviderProfileSchema = z.object({
   defaultModel: z.string().nullable(),
   temperature: temperatureSchema,
   maxTokens: maxTokensSchema,
+  maxCompletionTokens: maxTokensSchema,
   providerRouting: aiProviderRoutingSchema,
+  availableModels: z.array(z.string()),
+  modelsRefreshedAt: z.string().nullable(),
   isActive: z.boolean(),
   hasApiKey: z.boolean(),
   apiKeyPreview: z.string().nullable().optional(),
@@ -40,7 +43,8 @@ export const createAdminAiProviderProfileRequestSchema = z.object({
   apiKey: z.string().trim().min(1).max(4000),
   defaultModel: z.string().trim().min(1).max(200).optional(),
   temperature: temperatureSchema.default(1),
-  maxTokens: maxTokensSchema.default(500),
+  maxTokens: maxTokensSchema.default(2000),
+  maxCompletionTokens: maxTokensSchema.default(2000),
   providerRouting: aiProviderRoutingSchema.default({ mode: "default" }),
 });
 
@@ -51,6 +55,7 @@ export const updateAdminAiProviderProfileRequestSchema = z.object({
   defaultModel: z.string().trim().min(1).max(200).nullable().optional(),
   temperature: temperatureSchema.optional(),
   maxTokens: maxTokensSchema.optional(),
+  maxCompletionTokens: maxTokensSchema.optional(),
   providerRouting: aiProviderRoutingSchema.optional(),
 });
 

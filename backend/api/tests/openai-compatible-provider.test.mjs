@@ -37,6 +37,7 @@ await runCase("chat completion builds default fallback and only-one provider pay
     ...baseInput,
     temperature: 0.5,
     maxTokens: 700,
+    maxCompletionTokens: 900,
     providerRouting: { mode: "fallback", order: ["name1", "name2"] },
     fetchImplementation,
   });
@@ -47,7 +48,8 @@ await runCase("chat completion builds default fallback and only-one provider pay
   });
 
   assert.equal(bodies[0].temperature, 1);
-  assert.equal(bodies[0].max_tokens, 500);
+  assert.equal(bodies[0].max_tokens, 2000);
+  assert.equal(bodies[0].max_completion_tokens, 2000);
   assert.equal("provider" in bodies[0], false);
   assert.deepEqual(bodies[1].provider, {
     order: ["name1", "name2"],
@@ -55,6 +57,7 @@ await runCase("chat completion builds default fallback and only-one provider pay
   });
   assert.equal(bodies[1].temperature, 0.5);
   assert.equal(bodies[1].max_tokens, 700);
+  assert.equal(bodies[1].max_completion_tokens, 900);
   assert.deepEqual(bodies[2].provider, { only: ["name1"] });
 });
 

@@ -164,6 +164,10 @@ export async function registerAdminAiProviderProfileRoutes(app) {
           onError: (logError) => request.log.warn({ err: logError }, "Provider JSON log write failed"),
         },
       });
+      await request.server.services.updateAdminAiProviderModels({
+        profileId: profile.id,
+        models,
+      });
 
       return reply.send({ models });
     } catch (error) {
@@ -215,6 +219,7 @@ export async function registerAdminAiProviderProfileRoutes(app) {
         model: model.trim(),
         temperature: profile.temperature,
         maxTokens: profile.maxTokens,
+        maxCompletionTokens: profile.maxCompletionTokens,
         providerRouting: profile.providerRouting,
         logContext: {
           providerProfileId: profile.id,

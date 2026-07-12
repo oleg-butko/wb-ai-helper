@@ -348,12 +348,13 @@ export function AdminAiPromptProfilesCard() {
               color={notificationColor}
               radius="lg"
               title={error ? "Action failed" : "Action completed"}
+              variant="filled"
               withCloseButton
               onClose={closeNotification}
             >
               <Text size="sm">{notificationMessage}</Text>
               <Progress
-                color={notificationColor}
+                color="white"
                 mt="sm"
                 radius="xl"
                 size="xs"

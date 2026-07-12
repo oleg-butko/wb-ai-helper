@@ -1,6 +1,6 @@
 "use client";
 
-import { Alert, Badge, Button, Card, Group, NumberInput, PasswordInput, Select, Stack, Table, TagsInput, Text, TextInput, Title } from "@mantine/core";
+import { Alert, Badge, Box, Button, Card, Group, Loader, NumberInput, PasswordInput, Portal, Progress, Select, Stack, Table, TagsInput, Text, TextInput, Title } from "@mantine/core";
 import { useCallback, useEffect, useState } from "react";
 
 import type {
@@ -19,6 +19,7 @@ const routingModeOptions = [
   { value: "fallback", label: "Fallback" },
   { value: "only-one", label: "Only one" },
 ];
+const notificationDurationMs = 5000;
 
 function buildProviderRouting(mode: RoutingMode, order: string[], only: string): AiProviderRouting {
   if (mode === "fallback") {
@@ -30,18 +31,6 @@ function buildProviderRouting(mode: RoutingMode, order: string[], only: string):
   }
 
   return { mode: "default" };
-}
-
-function getRoutingSummary(routing: AiProviderRouting) {
-  if (routing.mode === "fallback") {
-    return `Fallback: ${routing.order.join(" → ")}`;
-  }
-
-  if (routing.mode === "only-one") {
-    return `Only: ${routing.only}`;
-  }
-
-  return "Default";
 }
 
 function isObject(payload: unknown): payload is Record<string, unknown> {
@@ -81,22 +70,28 @@ export function AdminAiProviderProfilesCard() {
   const [apiKey, setApiKey] = useState("");
   const [defaultModel, setDefaultModel] = useState("kimi-k2.5");
   const [temperature, setTemperature] = useState<number | string>(1);
-  const [maxTokens, setMaxTokens] = useState<number | string>(500);
+  const [maxTokens, setMaxTokens] = useState<number | string>(2000);
+  const [maxCompletionTokens, setMaxCompletionTokens] = useState<number | string>(2000);
   const [routingMode, setRoutingMode] = useState<RoutingMode>("default");
   const [providerOrder, setProviderOrder] = useState<string[]>([]);
   const [providerOnly, setProviderOnly] = useState("");
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [selectedTemperature, setSelectedTemperature] = useState<number | string>(1);
-  const [selectedMaxTokens, setSelectedMaxTokens] = useState<number | string>(500);
+  const [selectedMaxTokens, setSelectedMaxTokens] = useState<number | string>(2000);
+  const [selectedMaxCompletionTokens, setSelectedMaxCompletionTokens] = useState<number | string>(2000);
   const [selectedRoutingMode, setSelectedRoutingMode] = useState<RoutingMode>("default");
   const [selectedProviderOrder, setSelectedProviderOrder] = useState<string[]>([]);
   const [selectedProviderOnly, setSelectedProviderOnly] = useState("");
   const [checkResult, setCheckResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [notificationProgress, setNotificationProgress] = useState(100);
   const [loading, setLoading] = useState(false);
+  const [modelsLoading, setModelsLoading] = useState(false);
 
   const selectedProfile = profiles.find((profile) => profile.id === selectedProfileId) ?? null;
+  const notificationMessage = error ?? (checkResult ? `Check response: ${checkResult}` : feedback);
+  const notificationColor = error ? "red" : checkResult ? "blue" : "green";
   const modelOptions = Array.from(
     new Set([
       selectedProfile?.defaultModel,
@@ -126,9 +121,11 @@ export function AdminAiProviderProfilesCard() {
       setSelectedModel(nextSelectedProfile.defaultModel);
       setSelectedTemperature(nextSelectedProfile.temperature);
       setSelectedMaxTokens(nextSelectedProfile.maxTokens);
+      setSelectedMaxCompletionTokens(nextSelectedProfile.maxCompletionTokens);
       setSelectedRoutingMode(nextSelectedProfile.providerRouting.mode);
       setSelectedProviderOrder(nextSelectedProfile.providerRouting.mode === "fallback" ? nextSelectedProfile.providerRouting.order : []);
       setSelectedProviderOnly(nextSelectedProfile.providerRouting.mode === "only-one" ? nextSelectedProfile.providerRouting.only : "");
+      setModels(nextSelectedProfile.availableModels.map((id) => ({ id })));
     }
   }, [selectedProfileId]);
 
@@ -137,6 +134,36 @@ export function AdminAiProviderProfilesCard() {
       setError(loadError instanceof Error ? loadError.message : "Could not load AI provider profiles.");
     });
   }, [refreshProfiles]);
+
+  useEffect(() => {
+    if (!notificationMessage) {
+      return undefined;
+    }
+
+    const startedAt = Date.now();
+    setNotificationProgress(100);
+
+    const intervalId = window.setInterval(() => {
+      const elapsedMs = Date.now() - startedAt;
+      setNotificationProgress(Math.max(0, 100 - (elapsedMs / notificationDurationMs) * 100));
+    }, 100);
+    const timeoutId = window.setTimeout(() => {
+      setError(null);
+      setFeedback(null);
+      setCheckResult(null);
+    }, notificationDurationMs);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.clearTimeout(timeoutId);
+    };
+  }, [notificationMessage]);
+
+  function closeNotification() {
+    setError(null);
+    setFeedback(null);
+    setCheckResult(null);
+  }
 
   async function createProfile() {
     setLoading(true);
@@ -157,6 +184,7 @@ export function AdminAiProviderProfilesCard() {
           defaultModel: defaultModel || undefined,
           temperature: Number(temperature),
           maxTokens: Number(maxTokens),
+          maxCompletionTokens: Number(maxCompletionTokens),
           providerRouting: buildProviderRouting(routingMode, providerOrder, providerOnly),
         }),
       });
@@ -183,9 +211,10 @@ export function AdminAiProviderProfilesCard() {
       return;
     }
 
-    setLoading(true);
+    setModelsLoading(true);
     setError(null);
     setFeedback(null);
+    setCheckResult(null);
 
     try {
       const response = await fetch(`/api/admin/ai-provider-profiles/${encodeURIComponent(profileId)}/models`, {
@@ -199,10 +228,11 @@ export function AdminAiProviderProfilesCard() {
 
       setModels(payload.models);
       setFeedback(`Loaded ${payload.models.length} model(s).`);
+      await refreshProfiles(profileId);
     } catch (modelsError) {
       setError(modelsError instanceof Error ? modelsError.message : "Could not load provider models.");
     } finally {
-      setLoading(false);
+      setModelsLoading(false);
     }
   }
 
@@ -214,6 +244,7 @@ export function AdminAiProviderProfilesCard() {
     setLoading(true);
     setError(null);
     setFeedback(null);
+    setCheckResult(null);
 
     try {
       const response = await fetch(`/api/admin/ai-provider-profiles/${encodeURIComponent(selectedProfileId)}`, {
@@ -225,6 +256,7 @@ export function AdminAiProviderProfilesCard() {
           defaultModel: selectedModel,
           temperature: Number(selectedTemperature),
           maxTokens: Number(selectedMaxTokens),
+          maxCompletionTokens: Number(selectedMaxCompletionTokens),
           providerRouting: buildProviderRouting(
             selectedRoutingMode,
             selectedProviderOrder,
@@ -290,6 +322,7 @@ export function AdminAiProviderProfilesCard() {
     setLoading(true);
     setError(null);
     setFeedback(null);
+    setCheckResult(null);
 
     try {
       const response = await fetch(`/api/admin/ai-provider-profiles/${encodeURIComponent(selectedProfileId)}/activate`, {
@@ -312,9 +345,33 @@ export function AdminAiProviderProfilesCard() {
 
   return (
     <Stack gap="lg">
-      {error ? <Alert color="red">{error}</Alert> : null}
-      {feedback ? <Alert color="green">{feedback}</Alert> : null}
-      {checkResult ? <Alert color="blue">Check response: {checkResult}</Alert> : null}
+      {notificationMessage ? (
+        <Portal>
+          <Box
+            style={{
+              left: "50%",
+              maxWidth: "calc(100vw - 32px)",
+              position: "fixed",
+              top: 20,
+              transform: "translateX(-50%)",
+              width: 520,
+              zIndex: 10000,
+            }}
+          >
+            <Alert
+              color={notificationColor}
+              radius="lg"
+              title={error ? "Action failed" : "Action completed"}
+              variant="filled"
+              withCloseButton
+              onClose={closeNotification}
+            >
+              <Text size="sm">{notificationMessage}</Text>
+              <Progress color="white" mt="sm" radius="xl" size="xs" value={notificationProgress} />
+            </Alert>
+          </Box>
+        </Portal>
+      ) : null}
 
       <Card withBorder radius="lg" p="lg">
         <Stack gap="md">
@@ -326,6 +383,7 @@ export function AdminAiProviderProfilesCard() {
           <Group grow align="start">
             <NumberInput label="Temperature" min={0} max={2} step={0.1} decimalScale={2} value={temperature} onChange={setTemperature} />
             <NumberInput label="Max tokens" min={1} max={1_000_000} step={1} allowDecimal={false} value={maxTokens} onChange={setMaxTokens} />
+            <NumberInput label="Max completion tokens" min={1} max={1_000_000} step={1} allowDecimal={false} value={maxCompletionTokens} onChange={setMaxCompletionTokens} />
           </Group>
           <Select label="Provider routing" value={routingMode} onChange={(value) => setRoutingMode((value ?? "default") as RoutingMode)} data={routingModeOptions} />
           {routingMode === "fallback" ? (
@@ -339,6 +397,7 @@ export function AdminAiProviderProfilesCard() {
             disabled={
               typeof temperature !== "number" ||
               typeof maxTokens !== "number" ||
+              typeof maxCompletionTokens !== "number" ||
               (routingMode === "fallback" && providerOrder.length === 0) ||
               (routingMode === "only-one" && !providerOnly.trim())
             }
@@ -356,32 +415,23 @@ export function AdminAiProviderProfilesCard() {
             <Title order={3}>Provider profiles</Title>
             <Button variant="light" loading={loading} onClick={() => refreshProfiles()}>Refresh</Button>
           </Group>
-          <Table.ScrollContainer minWidth={1100}>
-            <Table verticalSpacing="sm">
+          <Table verticalSpacing="sm" style={{ tableLayout: "fixed", width: "100%" }}>
               <Table.Thead>
                 <Table.Tr>
                   <Table.Th>Label</Table.Th>
                   <Table.Th>Base URL</Table.Th>
                   <Table.Th>Default model</Table.Th>
-                  <Table.Th>Temperature</Table.Th>
-                  <Table.Th>Max tokens</Table.Th>
-                  <Table.Th>Routing</Table.Th>
                   <Table.Th>Status</Table.Th>
-                  <Table.Th>API key</Table.Th>
-                  <Table.Th />
+                  <Table.Th w={90} />
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
                 {profiles.map((profile) => (
                   <Table.Tr key={profile.id}>
-                    <Table.Td>{profile.label}</Table.Td>
-                    <Table.Td>{profile.baseUrl}</Table.Td>
-                    <Table.Td>{profile.defaultModel ?? "—"}</Table.Td>
-                    <Table.Td>{profile.temperature}</Table.Td>
-                    <Table.Td>{profile.maxTokens}</Table.Td>
-                    <Table.Td>{getRoutingSummary(profile.providerRouting)}</Table.Td>
+                    <Table.Td style={{ overflowWrap: "anywhere" }}>{profile.label}</Table.Td>
+                    <Table.Td style={{ overflowWrap: "anywhere" }}>{profile.baseUrl}</Table.Td>
+                    <Table.Td style={{ overflowWrap: "anywhere" }}>{profile.defaultModel ?? "—"}</Table.Td>
                     <Table.Td>{profile.isActive ? <Badge color="green">Active</Badge> : <Badge variant="light">Inactive</Badge>}</Table.Td>
-                    <Table.Td>{profile.apiKeyPreview ?? (profile.hasApiKey ? "saved" : "missing")}</Table.Td>
                     <Table.Td>
                       <Button
                         size="xs"
@@ -391,10 +441,11 @@ export function AdminAiProviderProfilesCard() {
                           setSelectedModel(profile.defaultModel);
                           setSelectedTemperature(profile.temperature);
                           setSelectedMaxTokens(profile.maxTokens);
+                          setSelectedMaxCompletionTokens(profile.maxCompletionTokens);
                           setSelectedRoutingMode(profile.providerRouting.mode);
                           setSelectedProviderOrder(profile.providerRouting.mode === "fallback" ? profile.providerRouting.order : []);
                           setSelectedProviderOnly(profile.providerRouting.mode === "only-one" ? profile.providerRouting.only : "");
-                          setModels([]);
+                          setModels(profile.availableModels.map((id) => ({ id })));
                           setCheckResult(null);
                         }}
                       >
@@ -405,7 +456,6 @@ export function AdminAiProviderProfilesCard() {
                 ))}
               </Table.Tbody>
             </Table>
-          </Table.ScrollContainer>
         </Stack>
       </Card>
 
@@ -421,8 +471,8 @@ export function AdminAiProviderProfilesCard() {
             <Text size="sm">Create or select a provider profile first.</Text>
           )}
           <Group>
-            <Button disabled={!selectedProfileId} loading={loading} onClick={() => loadModels()}>
-              List models
+            <Button disabled={!selectedProfileId} loading={modelsLoading} onClick={() => loadModels()}>
+              Refresh models list
             </Button>
             <Button disabled={!selectedProfileId} loading={loading} onClick={checkProfile}>
               Check provider
@@ -438,10 +488,13 @@ export function AdminAiProviderProfilesCard() {
             onChange={setSelectedModel}
             data={modelOptions}
             placeholder={selectedProfile?.defaultModel ?? "Load models first"}
+            rightSection={modelsLoading ? <Loader size="xs" /> : undefined}
+            rightSectionPointerEvents="none"
           />
           <Group grow align="start">
             <NumberInput label="Temperature" min={0} max={2} step={0.1} decimalScale={2} value={selectedTemperature} onChange={setSelectedTemperature} />
             <NumberInput label="Max tokens" min={1} max={1_000_000} step={1} allowDecimal={false} value={selectedMaxTokens} onChange={setSelectedMaxTokens} />
+            <NumberInput label="Max completion tokens" min={1} max={1_000_000} step={1} allowDecimal={false} value={selectedMaxCompletionTokens} onChange={setSelectedMaxCompletionTokens} />
           </Group>
           <Select label="Provider routing" value={selectedRoutingMode} onChange={(value) => setSelectedRoutingMode((value ?? "default") as RoutingMode)} data={routingModeOptions} />
           {selectedRoutingMode === "fallback" ? (
@@ -457,6 +510,7 @@ export function AdminAiProviderProfilesCard() {
               !selectedModel ||
               typeof selectedTemperature !== "number" ||
               typeof selectedMaxTokens !== "number" ||
+              typeof selectedMaxCompletionTokens !== "number" ||
               (selectedRoutingMode === "fallback" && selectedProviderOrder.length === 0) ||
               (selectedRoutingMode === "only-one" && !selectedProviderOnly.trim())
             }

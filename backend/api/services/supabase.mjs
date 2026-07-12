@@ -153,8 +153,11 @@ function mapAiProviderProfileRecord(item) {
     baseUrl: item.base_url,
     defaultModel: item.default_model ?? null,
     temperature: item.temperature ?? 1,
-    maxTokens: item.max_tokens ?? 500,
+    maxTokens: item.max_tokens ?? 2000,
+    maxCompletionTokens: item.max_completion_tokens ?? 2000,
     providerRouting: mapAiProviderRoutingRecord(item),
+    availableModels: Array.isArray(item.available_models) ? item.available_models : [],
+    modelsRefreshedAt: item.models_refreshed_at ?? null,
     isActive: Boolean(item.is_active),
     hasApiKey: Boolean(item.api_key_secret),
     apiKeyPreview: item.api_key_secret ? maskSecret(item.api_key_secret) : null,
@@ -213,7 +216,8 @@ function mapAiProviderProfileSecretRecord(item) {
     apiKey: item.api_key_secret,
     defaultModel: item.default_model ?? null,
     temperature: item.temperature ?? 1,
-    maxTokens: item.max_tokens ?? 500,
+    maxTokens: item.max_tokens ?? 2000,
+    maxCompletionTokens: item.max_completion_tokens ?? 2000,
     providerRouting: mapAiProviderRoutingRecord(item),
     isActive: Boolean(item.is_active),
   };
@@ -1224,7 +1228,7 @@ export function createApiServices(config = getApiConfig(), overrides = {}) {
     async listAdminAiProviderProfiles() {
       const { data, error } = await adminClient
         .from("ai_provider_profiles")
-        .select("id, label, base_url, api_key_secret, default_model, temperature, max_tokens, provider_routing_mode, provider_order, provider_only, is_active, created_at, updated_at")
+        .select("id, label, base_url, api_key_secret, default_model, temperature, max_tokens, max_completion_tokens, provider_routing_mode, provider_order, provider_only, available_models, models_refreshed_at, is_active, created_at, updated_at")
         .order("is_active", { ascending: false })
         .order("created_at", { ascending: false });
 
@@ -1240,7 +1244,8 @@ export function createApiServices(config = getApiConfig(), overrides = {}) {
       apiKey,
       defaultModel = null,
       temperature = 1,
-      maxTokens = 500,
+      maxTokens = 2000,
+      maxCompletionTokens = 2000,
       providerRouting = { mode: "default" },
       adminUserId,
     }) {
@@ -1253,11 +1258,12 @@ export function createApiServices(config = getApiConfig(), overrides = {}) {
           default_model: typeof defaultModel === "string" && defaultModel.trim() ? defaultModel.trim() : null,
           temperature,
           max_tokens: maxTokens,
+          max_completion_tokens: maxCompletionTokens,
           ...mapAiProviderRoutingPatch(providerRouting),
           created_by_admin_user_id: adminUserId,
           updated_by_admin_user_id: adminUserId,
         })
-        .select("id, label, base_url, api_key_secret, default_model, temperature, max_tokens, provider_routing_mode, provider_order, provider_only, is_active, created_at, updated_at")
+        .select("id, label, base_url, api_key_secret, default_model, temperature, max_tokens, max_completion_tokens, provider_routing_mode, provider_order, provider_only, available_models, models_refreshed_at, is_active, created_at, updated_at")
         .single();
 
       if (error) {
@@ -1274,6 +1280,7 @@ export function createApiServices(config = getApiConfig(), overrides = {}) {
       defaultModel,
       temperature,
       maxTokens,
+      maxCompletionTokens,
       providerRouting,
     }) {
       const patch = {};
@@ -1305,6 +1312,10 @@ export function createApiServices(config = getApiConfig(), overrides = {}) {
         patch.max_tokens = maxTokens;
       }
 
+      if (maxCompletionTokens !== undefined) {
+        patch.max_completion_tokens = maxCompletionTokens;
+      }
+
       if (providerRouting !== undefined) {
         Object.assign(patch, mapAiProviderRoutingPatch(providerRouting));
       }
@@ -1313,7 +1324,7 @@ export function createApiServices(config = getApiConfig(), overrides = {}) {
         .from("ai_provider_profiles")
         .update(patch)
         .eq("id", profileId)
-        .select("id, label, base_url, api_key_secret, default_model, temperature, max_tokens, provider_routing_mode, provider_order, provider_only, is_active, created_at, updated_at")
+        .select("id, label, base_url, api_key_secret, default_model, temperature, max_tokens, max_completion_tokens, provider_routing_mode, provider_order, provider_only, available_models, models_refreshed_at, is_active, created_at, updated_at")
         .maybeSingle();
 
       if (error) {
@@ -1331,7 +1342,7 @@ export function createApiServices(config = getApiConfig(), overrides = {}) {
     async getAdminAiProviderProfileSecret({ profileId }) {
       const { data, error } = await adminClient
         .from("ai_provider_profiles")
-        .select("id, label, base_url, api_key_secret, default_model, temperature, max_tokens, provider_routing_mode, provider_order, provider_only, is_active")
+        .select("id, label, base_url, api_key_secret, default_model, temperature, max_tokens, max_completion_tokens, provider_routing_mode, provider_order, provider_only, is_active")
         .eq("id", profileId)
         .maybeSingle();
 
@@ -1341,10 +1352,34 @@ export function createApiServices(config = getApiConfig(), overrides = {}) {
 
       return data ? mapAiProviderProfileSecretRecord(data) : null;
     },
+    async updateAdminAiProviderModels({ profileId, models }) {
+      const availableModels = Array.from(new Set(models.map((model) => model.id)));
+      const { data, error } = await adminClient
+        .from("ai_provider_profiles")
+        .update({
+          available_models: availableModels,
+          models_refreshed_at: new Date().toISOString(),
+        })
+        .eq("id", profileId)
+        .select("id")
+        .maybeSingle();
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data) {
+        const missingError = new Error("The requested AI provider profile was not found.");
+        missingError.code = "admin_ai_provider_profile_not_found";
+        throw missingError;
+      }
+
+      return availableModels;
+    },
     async getActiveAiProviderProfileSecret() {
       const { data, error } = await adminClient
         .from("ai_provider_profiles")
-        .select("id, label, base_url, api_key_secret, default_model, temperature, max_tokens, provider_routing_mode, provider_order, provider_only, is_active")
+        .select("id, label, base_url, api_key_secret, default_model, temperature, max_tokens, max_completion_tokens, provider_routing_mode, provider_order, provider_only, is_active")
         .eq("is_active", true)
         .maybeSingle();
 

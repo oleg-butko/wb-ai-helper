@@ -477,10 +477,13 @@ create table if not exists public.ai_provider_profiles (
   api_key_secret text not null,
   default_model text,
   temperature double precision not null default 1,
-  max_tokens integer not null default 500,
+  max_tokens integer not null default 2000,
+  max_completion_tokens integer not null default 2000,
   provider_routing_mode text not null default 'default',
   provider_order text[] not null default '{}'::text[],
   provider_only text,
+  available_models text[] not null default '{}'::text[],
+  models_refreshed_at timestamptz,
   is_active boolean not null default false,
   created_by_admin_user_id uuid references auth.users(id),
   updated_by_admin_user_id uuid references auth.users(id),
@@ -491,6 +494,7 @@ create table if not exists public.ai_provider_profiles (
   constraint ai_provider_profiles_api_key_not_empty check (length(trim(api_key_secret)) > 0),
   constraint ai_provider_profiles_temperature_range check (temperature >= 0 and temperature <= 2),
   constraint ai_provider_profiles_max_tokens_range check (max_tokens >= 1 and max_tokens <= 1000000),
+  constraint ai_provider_profiles_max_completion_tokens_range check (max_completion_tokens >= 1 and max_completion_tokens <= 1000000),
   constraint ai_provider_profiles_routing_mode_valid check (
     provider_routing_mode in ('default', 'fallback', 'only-one')
   ),
@@ -502,6 +506,68 @@ create table if not exists public.ai_provider_profiles (
     (provider_routing_mode = 'only-one' and cardinality(provider_order) = 0 and length(trim(provider_only)) > 0)
   )
 );
+
+-- Keep reruns upgrade-safe when ai_provider_profiles already exists.
+alter table public.ai_provider_profiles
+  add column if not exists temperature double precision not null default 1,
+  add column if not exists max_tokens integer not null default 2000,
+  add column if not exists max_completion_tokens integer not null default 2000,
+  add column if not exists provider_routing_mode text not null default 'default',
+  add column if not exists provider_order text[] not null default '{}'::text[],
+  add column if not exists provider_only text,
+  add column if not exists available_models text[] not null default '{}'::text[],
+  add column if not exists models_refreshed_at timestamptz;
+
+alter table public.ai_provider_profiles
+  alter column max_tokens set default 2000,
+  alter column max_completion_tokens set default 2000;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'ai_provider_profiles_temperature_range'
+  ) then
+    alter table public.ai_provider_profiles
+      add constraint ai_provider_profiles_temperature_range check (temperature >= 0 and temperature <= 2);
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint where conname = 'ai_provider_profiles_max_tokens_range'
+  ) then
+    alter table public.ai_provider_profiles
+      add constraint ai_provider_profiles_max_tokens_range check (max_tokens >= 1 and max_tokens <= 1000000);
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint where conname = 'ai_provider_profiles_max_completion_tokens_range'
+  ) then
+    alter table public.ai_provider_profiles
+      add constraint ai_provider_profiles_max_completion_tokens_range check (max_completion_tokens >= 1 and max_completion_tokens <= 1000000);
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint where conname = 'ai_provider_profiles_routing_mode_valid'
+  ) then
+    alter table public.ai_provider_profiles
+      add constraint ai_provider_profiles_routing_mode_valid check (
+        provider_routing_mode in ('default', 'fallback', 'only-one')
+      );
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint where conname = 'ai_provider_profiles_routing_values_valid'
+  ) then
+    alter table public.ai_provider_profiles
+      add constraint ai_provider_profiles_routing_values_valid check (
+        (provider_routing_mode = 'default' and cardinality(provider_order) = 0 and provider_only is null)
+        or
+        (provider_routing_mode = 'fallback' and cardinality(provider_order) > 0 and provider_only is null)
+        or
+        (provider_routing_mode = 'only-one' and cardinality(provider_order) = 0 and length(trim(provider_only)) > 0)
+      );
+  end if;
+end;
+$$;
 
 create index if not exists ai_provider_profiles_created_idx
 on public.ai_provider_profiles (created_at desc);
@@ -750,6 +816,8 @@ before update on public.extension_generation_requests
 for each row
 execute function public.handle_extension_generation_requests_updated_at();
 
+drop function if exists public.activate_ai_provider_profile(uuid, uuid);
+
 create or replace function public.activate_ai_provider_profile(
   profile_id uuid,
   admin_user_id uuid
@@ -762,9 +830,12 @@ returns table (
   default_model text,
   temperature double precision,
   max_tokens integer,
+  max_completion_tokens integer,
   provider_routing_mode text,
   provider_order text[],
   provider_only text,
+  available_models text[],
+  models_refreshed_at timestamptz,
   is_active boolean,
   created_at timestamptz,
   updated_at timestamptz
@@ -797,9 +868,12 @@ begin
     ai_provider_profiles.default_model,
     ai_provider_profiles.temperature,
     ai_provider_profiles.max_tokens,
+    ai_provider_profiles.max_completion_tokens,
     ai_provider_profiles.provider_routing_mode,
     ai_provider_profiles.provider_order,
     ai_provider_profiles.provider_only,
+    ai_provider_profiles.available_models,
+    ai_provider_profiles.models_refreshed_at,
     ai_provider_profiles.is_active,
     ai_provider_profiles.created_at,
     ai_provider_profiles.updated_at;

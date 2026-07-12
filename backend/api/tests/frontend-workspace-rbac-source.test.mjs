@@ -154,6 +154,24 @@ await runCase("admin prompt alerts float and auto close", async () => {
   assert.match(source, /withCloseButton/);
   assert.match(source, /window\.setTimeout/);
   assert.match(source, /<Progress/);
+  assert.match(source, /variant="filled"/);
+});
+
+await runCase("admin provider page uses cached models compact rows and opaque alerts", async () => {
+  const source = await readFile(
+    new URL("../../src/modules/admin/components/admin-ai-provider-profiles-card.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /availableModels\.map/);
+  assert.match(source, /Refresh models list/);
+  assert.match(source, /rightSection=\{modelsLoading \? <Loader/);
+  assert.match(source, /notificationDurationMs = 5000/);
+  assert.match(source, /position: "fixed"/);
+  assert.match(source, /variant="filled"/);
+  assert.doesNotMatch(source, /<Table\.Th>Temperature<\/Table\.Th>/);
+  assert.doesNotMatch(source, /<Table\.Th>Max tokens<\/Table\.Th>/);
+  assert.doesNotMatch(source, /<Table\.Th>Routing<\/Table\.Th>/);
 });
 
 await runCase("extension user persistence is idempotent for repeated user_id calls", async () => {

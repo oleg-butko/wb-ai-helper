@@ -257,6 +257,7 @@ export async function registerExtensionRoutes(app) {
         model: providerProfile.defaultModel,
         temperature: providerProfile.temperature,
         maxTokens: providerProfile.maxTokens,
+        maxCompletionTokens: providerProfile.maxCompletionTokens,
         providerRouting: providerProfile.providerRouting,
         messages: [
           {

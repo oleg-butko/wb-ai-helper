@@ -25,7 +25,7 @@ drop table if exists public.extension_users cascade;
 drop table if exists public.extension_api_key_quota_events cascade;
 drop table if exists public.extension_api_keys cascade;
 drop table if exists public.ai_prompt_profiles cascade;
--- Also removes saved temperature, max-token, and provider-routing configuration.
+-- Also removes saved generation settings, provider routing, and cached model lists.
 drop table if exists public.ai_provider_profiles cascade;
 drop table if exists public.admins cascade;
 drop table if exists public.workspace_module_roles cascade;

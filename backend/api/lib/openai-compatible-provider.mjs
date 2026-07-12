@@ -123,7 +123,8 @@ export async function checkOpenAiCompatibleChat({
   apiKey,
   model,
   temperature = 1,
-  maxTokens = 500,
+  maxTokens = 2000,
+  maxCompletionTokens = 2000,
   providerRouting = { mode: "default" },
   fetchImplementation = globalThis.fetch,
   logContext,
@@ -144,6 +145,7 @@ export async function checkOpenAiCompatibleChat({
     ],
     temperature,
     maxTokens,
+    maxCompletionTokens,
     providerRouting,
     fetchImplementation,
     logContext: {
@@ -159,7 +161,8 @@ export async function createOpenAiCompatibleChatCompletion({
   model,
   messages,
   temperature = 1,
-  maxTokens = 500,
+  maxTokens = 2000,
+  maxCompletionTokens = 2000,
   providerRouting = { mode: "default" },
   fetchImplementation = globalThis.fetch,
   logContext,
@@ -172,6 +175,10 @@ export async function createOpenAiCompatibleChatCompletion({
 
   if (Number.isInteger(maxTokens) && maxTokens > 0) {
     requestPayload.max_tokens = maxTokens;
+  }
+
+  if (Number.isInteger(maxCompletionTokens) && maxCompletionTokens > 0) {
+    requestPayload.max_completion_tokens = maxCompletionTokens;
   }
 
   if (providerRouting.mode === "fallback") {
